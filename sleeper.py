@@ -1,5 +1,11 @@
 import sleeper_wrapper as Sleeper
+import logging
+from logging.config import fileConfig
 from collections import defaultdict
+import time
+
+fileConfig('logging_config.ini')
+logger = logging.getLogger()
 
 class Week():
     def __init__(self, week=0, user="", max_score=0, actual_score=0, best_lineup=None, actual_lineup=None, matchup_id=0, opponent=0):
@@ -60,16 +66,19 @@ def getAllMatchupResults(sleeper: SleeperLeague):
         for k, v in weekResults.items():
             allWeeks[k].append(v)
     return allWeeks
+
 def getMatchupResultsByWeek(sleeper: SleeperLeague, week):
     userResultsByWeek = dict()
     users = sleeper.get_all_users()
     players = sleeper.get_all_players()
     rosters = sleeper.get_all_rosters()
+    logger.debug("Gathering matchups for week %d", week)
     matchups = sleeper.league.get_matchups(week)
-
+    logger.debug("Matchups gathered")
     #For each matchup in the week, collect the starters points and find the maximum score for the scoring format provided
     for matchup in matchups:
         user = users[rosters[matchup['roster_id']]['owner_id']]
+        logger.debug("Gathering stat information for user %s for week %d", user['display_name'], week)
         starters = matchup['starters']
         actual_score = 0
         max_score = 0
@@ -94,6 +103,7 @@ def getMatchupResultsByWeek(sleeper: SleeperLeague, week):
             #after collecing all, find the index of the player in each of his positions
             #remove him from the list that has the higher index
             #basically chooses the position where he would have perfomred best in on the team
+        logger.debug("calculating best roster for user %s in week %d", user['display_name'], week)
         for player in matchup['players']:
             p = players[player]
 
@@ -111,8 +121,6 @@ def getMatchupResultsByWeek(sleeper: SleeperLeague, week):
                 except KeyError:
                     #an unenxpected position value came up and we shall ignore it
                     continue
-
-
 
         #accounts for up to 2 positions
 
@@ -150,6 +158,7 @@ def getMatchupResultsByWeek(sleeper: SleeperLeague, week):
                 # an unenxpected position value came up and we shall ignore it
                 continue
         #create the best lineup based on the number of available slots in the league
+
         bestLineup = []
         bestLineup.extend(positions['QB'][:sleeper.numQB])
         bestLineup.extend(positions['RB'][:sleeper.numRB])
@@ -168,6 +177,7 @@ def getMatchupResultsByWeek(sleeper: SleeperLeague, week):
         newWeek = Week(week, user['display_name'], round(max_score, 2), round(actual_score, 2), bestLineup, matchup['starters'], matchup['matchup_id'], 0)
         userResultsByWeek[user['user_id']] = newWeek
 
+    logger.debug("Determining opponents for each user in week %d", week)
     for k, v in userResultsByWeek.items():
         if v.opponent == 0:
             for k2, v2 in userResultsByWeek.items():
@@ -209,14 +219,14 @@ def calculate_standings_regular_season(sleeper: SleeperLeague, allWeeks):
     for week in range(1, sleeper.league.get_league()['settings']['playoff_week_start']):
         for user in allWeeks.keys():
             userScore = allWeeks[user][week - 1].actual_score
-            opponentScore = allWeeks[allWeeks[user][week].opponent][week - 1].actual_score
+            opponentScore = allWeeks[allWeeks[user][week - 1].opponent][week - 1].actual_score
             if userScore < opponentScore:
                 standings[user][1] += 1
             elif userScore > opponentScore:
                 standings[user][0] += 1
             else:
                 standings[user][2] += 1
-            print(f"{allWeeks[user][week - 1].user}  {allWeeks[user][week - 1].actual_score} - {allWeeks[allWeeks[user][week].opponent][week - 1].actual_score}  {allWeeks[allWeeks[user][week].opponent][week - 1].user}")
+            logger.debug(f"{allWeeks[user][week - 1].user}  {allWeeks[user][week - 1].actual_score} - {allWeeks[allWeeks[user][week - 1].opponent][week - 1].actual_score}  {allWeeks[allWeeks[user][week - 1].opponent][week - 1].user}")
     return standings
 # Stats.get_player_week_score(Stats.get_week_stats('regular', 2023, 1), 4831)
 #
@@ -227,10 +237,18 @@ def calculate_standings_regular_season(sleeper: SleeperLeague, allWeeks):
 # rosters = loadRosters()
 
 def main():
+    logger.debug("Starting")
+    start = time.time()
     sleeper = SleeperLeague(917999692448034816)
+    logger.debug("Connected to sleeper API [%s]", time.time() - start)
+
+    logger.debug("Getting all matchup results")
+    start = time.time()
     allWeeks = getAllMatchupResults(sleeper)
+    logger.debug("All matchup results gathered [%s]", time.time() - start)
     #pts_ppr, pts_half_ppr, pts_std, pts_ppfd
-    alternateWeeks = calculate_alternate_scoring_scores(sleeper, allWeeks, 'pts_ppr')
+    #alternateWeeks = calculate_alternate_scoring_scores(sleeper, allWeeks, 'pts_ppr')
+
     standings = calculate_standings_regular_season(sleeper, allWeeks)
     print(standings)
 main()
