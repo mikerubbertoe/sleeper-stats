@@ -4,8 +4,8 @@ import numpy as np
 import logging
 
 from logging.config import fileConfig
-
-from sleeper import SleeperLeague, Week
+from model.SleeperLeague import SleeperLeague
+from model.Week import Week
 
 fileConfig('logging_config.ini')
 logger = logging.getLogger()
@@ -20,10 +20,10 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
 
     for user in all_weeks.keys():
         if user not in matchup_gathered:
-            player = all_weeks[user][week - 1]
-            opponent = all_weeks[all_weeks[user][week - 1].opponent][week - 1]
+            player = all_weeks[user].matchups[week - 1]
+            opponent = all_weeks[all_weeks[user].matchups[week - 1].opponent].matchups[week - 1]
             matchup_gathered.add(user)
-            matchup_gathered.add(all_weeks[user][week - 1].opponent)
+            matchup_gathered.add(all_weeks[user].matchups[week - 1].opponent)
             formatted_match, winner = format_matchup(player, opponent)
             week_results.append(formatted_match)
 
@@ -46,7 +46,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
                      loc="center",
                      cellLoc='center')
 
-    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} Week {week} (SCORING FORMAT)", y=1.0, pad=-35)
+    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} Week {week} (SCORING FORMAT)", y=0.830)
     plt.tight_layout()
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -64,13 +64,13 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
 def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
     column_labels = ["Thrown Week?", "Start/Sit Accuracy", "Max Points", "Acual Points", "Team 1", "Team 2",
                      "Actual Points", "Max Points", "Start/Sit Accuracy", "Thrown Week?"]
-    row_labels = [f"Week {i}" for i in range(1, len(all_weeks[user]) + 1)]
+    row_labels = [f"Week {i}" for i in range(1, len(all_weeks[user].matchups) + 1)]
     week_results = []
     coloring = []
 
-    for matchup in all_weeks[user]:
+    for matchup in all_weeks[user].matchups:
         week = matchup.week
-        opponent = all_weeks[all_weeks[user][week - 1].opponent][week - 1]
+        opponent = all_weeks[all_weeks[user].matchups[week - 1].opponent].matchups[week - 1]
         formatted_match, winner = format_matchup(matchup, opponent)
         week_results.append(formatted_match)
         coloring.append(get_cell_coloring(winner, len(column_labels)))
@@ -94,7 +94,7 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
                      colWidths=[0.1] * 10,
                      loc="center",
                      cellLoc='center')
-    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} {all_weeks[user][0].user}'s Season (SCORING FORMAT)", y=1.0, pad=-140)
+    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} {all_weeks[user].name}'s Season (SCORING FORMAT)", y=0.800) #800
     plt.tight_layout()
     table.auto_set_font_size(False)
     table.set_fontsize(9)

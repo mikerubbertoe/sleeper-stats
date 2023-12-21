@@ -2,72 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="bd9c1739-eca2-4ca0-bf35-cfb93913da7b" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/sleeper_season.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logging_config.ini" beforeDir="false" afterPath="$PROJECT_DIR$/logging_config.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sleeper.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/report_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/report_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sleeper.py" beforeDir="false" afterPath="$PROJECT_DIR$/sleeper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sleeper_season.py" beforeDir="false" afterPath="$PROJECT_DIR$/sleeper_season.py" afterDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
-    <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
-  </component>
-  <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="logging_config.ini" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/logging_config.ini">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="170">
-              <caret line="10" column="10" selection-start-line="10" selection-start-column="10" selection-end-line="10" selection-end-column="10" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="sleeper_season.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sleeper_season.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1877">
-              <caret line="262" column="45" lean-forward="true" selection-start-line="262" selection-start-column="45" selection-end-line="262" selection-end-column="45" />
-              <folding>
-                <element signature="e#1#15#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="report_generator.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/report_generator.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="313">
-              <caret line="96" column="95" selection-start-line="96" selection-start-column="95" selection-end-line="96" selection-end-column="95" />
-              <folding>
-                <element signature="e#0#19#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="sleeper.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/sleeper.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state>
-              <caret selection-end-column="33" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="scoring_formats.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/scoring_formats.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="119">
-              <caret line="7" column="21" selection-start-line="7" selection-start-column="21" selection-end-line="7" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -100,12 +44,16 @@
       </list>
     </option>
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="-8" />
     <option name="y" value="-8" />
     <option name="width" value="1936" />
     <option name="height" value="1056" />
   </component>
+  <component name="ProjectId" id="2ZpVIxs5WnocOahwnupVud3xExG" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
@@ -130,23 +78,17 @@
       <pane id="Scope" />
     </panes>
   </component>
-  <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
   </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
-  <component name="RunManager" selected="Python.sleeper">
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "last_opened_file_path": "C:/Users/chris/PycharmProjects/sleeper-stats",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  }
+}]]></component>
+  <component name="RunManager" selected="Python.sleeper_season">
     <configuration name="report_generator" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="sleeper-stats" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -164,6 +106,9 @@
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
     <configuration name="sleeper" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="sleeper-stats" />
@@ -182,18 +127,45 @@
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="sleeper_season" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="sleeper-stats" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/sleeper_season.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.sleeper_season" />
       <item itemvalue="Python.sleeper" />
       <item itemvalue="Python.report_generator" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.sleeper" />
+        <item itemvalue="Python.sleeper_season" />
         <item itemvalue="Python.report_generator" />
+        <item itemvalue="Python.sleeper" />
       </list>
     </recent_temporary>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -249,6 +221,17 @@
       <window_info id="Favorites" order="0" side_tool="true" />
     </layout-to-restore>
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
@@ -256,12 +239,11 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/report_generator.py</url>
-          <line>17</line>
-          <option name="timeStamp" value="46" />
+          <url>file://$PROJECT_DIR$/sleeper_season.py</url>
+          <line>276</line>
+          <option name="timeStamp" value="67" />
         </line-breakpoint>
       </breakpoints>
-      <option name="time" value="47" />
     </breakpoint-manager>
   </component>
   <component name="debuggerHistoryManager">
@@ -342,14 +324,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Program Files (x86)/Python36-32/Lib/site-packages/matplotlib/table.py">
+    <entry file="file://$PROJECT_DIR$/../../../../Program Files (x86)/Python36-32/Lib/site-packages/matplotlib/table.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="167">
           <caret line="772" selection-start-line="772" selection-end-line="772" />
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Program Files (x86)/Python36-32/Lib/site-packages/matplotlib/artist.py">
+    <entry file="file://$PROJECT_DIR$/../../../../Program Files (x86)/Python36-32/Lib/site-packages/matplotlib/artist.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="430">
           <caret line="997" selection-start-line="997" selection-end-line="997" />

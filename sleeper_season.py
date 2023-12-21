@@ -1,79 +1,41 @@
 import logging
+import time
 from logging.config import fileConfig
 from collections import defaultdict
-import time
 
 import report_generator
-from sleeper import SleeperLeague, Week
+from model.Week import Week
+from model.SleeperLeague import SleeperLeague
+from model.Season import Season
+from model.OpponentSeason import OpponentSeason
 
 fileConfig('logging_config.ini')
 logger = logging.getLogger()
 
-# class Week:
-#     def __init__(self, week=0, user="", max_score=0, actual_score=0, best_lineup=None, actual_lineup=None, matchup_id=0, opponent=0):
-#         self.week = week
-#         self.user = user
-#         self.max_score = max_score
-#         self.actual_score = actual_score
-#         self.best_lineup = best_lineup
-#         self.actual_lineup = actual_lineup
-#         self.matchup_id = matchup_id
-#         self.opponent = opponent
-#
-#     def __repr__(self):
-#         return f"{self.user} week {self.week}: actual: {self.actual_score} max: {self.max_score}"
-#
-#
-# class SleeperLeague:
-#     def __init__(self, league_id=-1):
-#         self.league_id = league_id
-#         self.players = Sleeper.Players()
-#         self.stats = Sleeper.Stats()
-#         self.league = Sleeper.League(league_id)
-#         self.numQB   = self.league.get_league()['roster_positions'].count('QB')
-#         self.numRB   = self.league.get_league()['roster_positions'].count('RB')
-#         self.numWR   = self.league.get_league()['roster_positions'].count('WR')
-#         self.numTE   = self.league.get_league()['roster_positions'].count('TE')
-#         self.numFlex = self.league.get_league()['roster_positions'].count('FLEX')
-#         self.numK    = self.league.get_league()['roster_positions'].count('K')
-#         self.numDST  = self.league.get_league()['roster_positions'].count('DST')
-#         self.allPlayers = self.players.get_all_players()
-#         self.users = self.league.get_users()
-#         self.rosters = self.league.get_rosters()
-#
-#     def get_all_players(self):
-#         return self.allPlayers
-#
-#     def get_all_users(self):
-#         users = dict()
-#         for user in self.users:
-#             users[user['user_id']] = user
-#         return users
-#
-#     def get_all_rosters(self):
-#         rosters = dict()
-#         for roster in self.rosters:
-#             rosters[roster['roster_id']] = roster
-#         return rosters
-#
-#
-
 def get_all_matchup_results(sleeper: SleeperLeague, scoring_format):
-    all_weeks = defaultdict(list)
-    for week in range(1, sleeper.league.get_league()['settings']['leg'] + 1):
+    season = dict()
+    for user in sleeper.users:
+        season[user['user_id']] = Season(name=user['display_name'], user_id=user['user_id'], matchups=[])
+    num_weeks = min(sleeper.league.get_league()['settings']['leg'], sleeper.league.get_league()['settings']['playoff_week_start'])
+    for week in range(1, num_weeks):
         week_results = get_matchup_results_by_week(sleeper, week, scoring_format)
         for k, v in week_results.items():
-            all_weeks[k].append(v)
-    return all_weeks
+            season[k].matchups.append(v)
+            season[k].points_earned += v.actual_score
+            season[k].points_possible += round(v.max_score, 2)
+            #season[k].points_against += round(v.opponent_score, 2)
+    calculate_standings_regular_season(sleeper, season)
+    return season
 
 def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
+    logger.info("Gathering results for week %d", week)
     user_results_by_week = dict()
     users = sleeper.get_all_users()
     rosters = sleeper.get_all_rosters()
-    logger.info("Gathering matchups for week %d", week)
+    logger.debug("Gathering matchups for week %d", week)
     matchups = sleeper.league.get_matchups(week)
     logger.debug("Matchups gathered")
-    logger.info("Gathering stats for week %d", week)
+    logger.debug("Gathering stats for week %d", week)
     week_stats = sleeper.stats.get_week_stats('regular', '2023', week)
     logger.debug("Stats gathered")
 
@@ -92,21 +54,23 @@ def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
         #calculate the max score based on the scoring format used in the league
         for player in best_lineup:
             max_score += matchup['players_points'][player]
-        new_week = Week(week, user['display_name'], round(max_score, 2), round(actual_score, 2), best_lineup, matchup['starters'], matchup['matchup_id'], 0)
+        new_week = Week(week, user['display_name'], round(max_score, 2), round(actual_score, 2), best_lineup, matchup['starters'], matchup['matchup_id'], 0, 0)
         user_results_by_week[user['user_id']] = new_week
 
-    logger.info("Determining opponents for each user in week %d", week)
+    logger.debug("Determining opponents for each user in week %d", week)
     for k, v in user_results_by_week.items():
         if v.opponent == 0:
             for k2, v2 in user_results_by_week.items():
                 if v.matchup_id == v2.matchup_id and k != k2:
                     user_results_by_week[k].opponent = k2
+                    user_results_by_week[k].opponent_score = v2.actual_score
                     user_results_by_week[k2].opponent = k
+                    user_results_by_week[k2].opponent_score = v.actual_score
                     break
+
     return user_results_by_week
 
 def calculate_best_lineup(sleeper, user, week, matchup, week_stats, scoring_format):
-    logger.debug("Gathering stat information for user %s for week %d", user['display_name'], week)
 
     # keep track of all the positions and who the highest scorer was in each position
     positions = {
@@ -145,7 +109,6 @@ def calculate_best_lineup(sleeper, user, week, matchup, week_stats, scoring_form
                 continue
 
     # accounts for up to 2 positions
-
     for dual_player in multiple_positions:
         try:
             pos = sleeper.get_all_players()[dual_player]['fantasy_positions']
@@ -217,38 +180,102 @@ def get_player_score(player, week_stats, scoring_format):
     except KeyError:
         return 0
 
-# def calculate_alternate_scoring_scores(sleeper: SleeperLeague, all_weeks, type):
-#     alternateall_weeks = defaultdict(list)
-#     for week in range(1, sleeper.league.get_league()['settings']['leg'] + 1):
-#         weekStats = sleeper.stats.get_week_stats('regular', '2023', week)
-#         for user in all_weeks.keys():
-#             user_week = all_weeks[user][week - 1]
-#             actual_score = 0
-#             for player_id in user_week.actual_lineup:
-#                 if type == 'pts_ppfd':
-#                     actual_score += weekStats[player_id].get('rush_fd', 0) + weekStats[player_id].get('rec_fd', 0)
-#                     type = 'pts_std'
-#                 try:
-#                     actual_score += weekStats[player_id].get(type, 0)
-#                 except KeyError:
-#                     continue
-#             alternateall_weeks[user].append(Week(week, user_week.user, 0, round(actual_score, 2), None, user_week.actual_lineup, user_week.matchup_id, user_week.opponent))
-#     return alternateall_weeks
-
-def calculate_standings_regular_season(sleeper: SleeperLeague, all_weeks):
-    standings = defaultdict(lambda: [0] * 3)
+def calculate_standings_regular_season(sleeper: SleeperLeague, all_seasons):
     for week in range(1, sleeper.league.get_league()['settings']['playoff_week_start']):
-        for user in all_weeks.keys():
-            user_score = all_weeks[user][week - 1].actual_score
-            opponent_score = all_weeks[all_weeks[user][week - 1].opponent][week - 1].actual_score
+        for user in all_seasons.keys():
+            opponent = all_seasons[user].matchups[week - 1].opponent
+            user_score = all_seasons[user].matchups[week - 1].actual_score
+            opponent_score = all_seasons[opponent].matchups[week - 1].actual_score
             if user_score < opponent_score:
-                standings[user][1] += 1
+                all_seasons[user].losses += 1
             elif user_score > opponent_score:
-                standings[user][0] += 1
+                all_seasons[user].wins += 1
             else:
-                standings[user][2] += 1
-            logger.debug(f"{all_weeks[user][week - 1].user}  {all_weeks[user][week - 1].actual_score} - {all_weeks[all_weeks[user][week - 1].opponent][week - 1].actual_score}  {all_weeks[all_weeks[user][week - 1].opponent][week - 1].user}")
-    return standings
+                all_seasons[user].ties += 1
+
+    if logger.level == logging.DEBUG:
+        for v in all_seasons.values():
+            logger.debug(f"{v.name}: {v.get_record()}")
+
+def caulculate_standings_for_all_schedules(sleeper: SleeperLeague, all_seasons):
+    all_potential_seasons = dict()
+    for k, v in (all_seasons.items()):
+        user = v.user_id
+        all_potential_seasons[user] = calculate_user_standings_for_all_schedule(sleeper, all_seasons, user)
+
+    return all_potential_seasons
+
+def calculate_user_standings_for_all_schedule(sleeper: SleeperLeague, all_seasons, user):
+    all_potential_season = dict()
+    for u in all_seasons.keys():
+        all_potential_season[u] = []
+
+    for v in (all_seasons.values()):
+        original_season_id = v.user_id
+        potential_seasons = dict()
+        for u in all_seasons.keys():
+            potential_seasons[u] = Season(all_seasons[u].name, all_seasons[u].user_id,
+                points_earned=all_seasons[u].points_earned,
+                points_against=all_seasons[u].points_against,
+                points_possible=all_seasons[u].points_possible)
+
+        for week in range(1, sleeper.league.get_league()['settings']['playoff_week_start']):
+            for u in all_seasons.keys():
+                opponent = all_seasons[u].matchups[week - 1].opponent
+
+                # If the u we are currently looking at is the one we are doing the projections for, we need to flip the opponent
+                # they are facing with the original schedule
+                if u == user:
+                    opponent = all_seasons[original_season_id].matchups[week - 1].opponent
+                    # If we see we are playing ourselves, that means the matchup is user vs original_season_id and set the opponent
+                    # back to the original season id
+                    if opponent == user:
+                        opponent = original_season_id
+
+                # If the u we are currently looking at is the one original schedule id, we need to flip the opponent
+                # they are facing with the user
+                elif u == original_season_id:
+                    opponent = all_seasons[user].matchups[week - 1].opponent
+                    # If we see we are playing ourselves, that means the matchup is user vs original_season_id and set the opponent
+                    # back to the user id
+                    if opponent == original_season_id:
+                        opponent = user
+
+                # if the opponent we are playing is the user, flip it to the original season id
+                elif opponent == user:
+                    opponent = original_season_id
+
+                # if the opponent we are playing is the original season id, flip it to the user
+                elif opponent == original_season_id:
+                    opponent = user
+
+                user_score = all_seasons[u].matchups[week - 1].actual_score
+                opponent_score = all_seasons[opponent].matchups[week - 1].actual_score
+                if user_score < opponent_score:
+                    potential_seasons[u].losses += 1
+                elif user_score > opponent_score:
+                    potential_seasons[u].wins += 1
+                else:
+                    potential_seasons[u].ties += 1
+        find_playoff_teams(potential_seasons, sleeper.league.get_league()['settings']['playoff_teams'])
+        all_potential_season[original_season_id].append(potential_seasons)
+    return all_potential_season
+
+def find_playoff_teams(season, num_playoff_teams):
+    seeding = []
+    for k, user in season.items():
+        added = False
+        for i in range(len(seeding)):
+            opponent = season[seeding[i]]
+            if user.wins > opponent.wins or (user.wins == opponent.wins and user.points_earned > opponent.points_earned):
+                seeding.insert(i, k)
+                added = True
+                break
+        if not added:
+            seeding.append(k)
+
+    for i in range(num_playoff_teams):
+        season[seeding[i]].playoffs_made = True
 
 def main():
     logger.info("Starting")
@@ -258,12 +285,13 @@ def main():
 
     logger.info("Getting all matchup results")
     start = time.time()
-    all_weeks = get_all_matchup_results(sleeper, "pts_half_ppr")
+    all_weeks = get_all_matchup_results(sleeper, "pts_ppr")
     logger.info("All matchup results gathered [%s]", time.time() - start)
-    #pts_ppr, pts_half_ppr, pts_std, pts_ppfd
-    #alternateWeeks = calculate_alternate_scoring_scores(sleeper, all_weeks, 'pts_ppr')
-    data = report_generator.generate_week_report(sleeper, all_weeks, 1)
-    report_generator.generate_user_report(sleeper, all_weeks, '735058243386212352')
-    standings = calculate_standings_regular_season(sleeper, all_weeks)
-    print(standings)
+    calculate_standings_regular_season(sleeper, all_weeks)
+    calculate_user_standings_for_all_schedule(sleeper, all_weeks, '735058243386212352')
+
+
+    #report_generator.generate_week_report(sleeper, all_weeks, 1)
+    #report_generator.generate_user_report(sleeper, all_weeks, '735058243386212352')
+
 main()
