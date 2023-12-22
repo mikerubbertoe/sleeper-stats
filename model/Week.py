@@ -9,6 +9,5 @@ class Week:
         self.matchup_id = matchup_id
         self.opponent = opponent
         self.opponent_score = opponent_score
-
     def __repr__(self):
         return f"{self.user} week {self.week}: actual: {self.actual_score} max: {self.max_score}"
