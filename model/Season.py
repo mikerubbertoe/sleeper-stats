@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 class Season:
     def __init__(self, name='', user_id='', matchups=None, wins=0, losses=0, ties=0, made_playoffs=False, place=0, points_earned=0, points_against=0, points_possible=0):
         self.name = name
@@ -24,3 +26,47 @@ class Season:
 
     def get_season_accuracy(self):
         return round(self.points_earned / self.points_possible, 2)
+
+def get_season_rankings(seasons):
+    seeding = []
+    for k, user in seasons.items():
+        added = False
+        for i in range(len(seeding)):
+            opponent = seasons[seeding[i]]
+            if user.wins > seasons[seeding[i]].wins or (
+                    user.wins == opponent.wins and user.points_earned > opponent.points_earned):
+                seeding.insert(i, k)
+                added = True
+                break
+        if not added:
+            seeding.append(k)
+    return seeding
+
+def get_weekly_rankings(seasons, week):
+    seeding = []
+    for k, user in seasons.items():
+        added = False
+        for i in range(len(seeding)):
+            opponent = seasons[seeding[i]]
+            if user.matchups[week - 1].place < opponent.matchups[week - 1].place:
+                seeding.insert(i, k)
+                added = True
+                break
+        if not added:
+            seeding.append(k)
+    return seeding
+
+def get_record_up_to_week(seasons, week):
+    partial_records = defaultdict(Season)
+    for i in range(week):
+        for k, user in seasons.items():
+            user_result = user.matchups[i].result
+            if user_result > 0:
+                partial_records[k].wins += 1
+            elif user_result < 0:
+                partial_records[k].losses += 1
+            else:
+                partial_records[k].ties += 1
+    for k, v in partial_records.items():
+        partial_records[k] = v.get_record()
+    return partial_records

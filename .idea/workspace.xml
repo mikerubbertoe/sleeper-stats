@@ -88,7 +88,7 @@
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.sleeper_season">
+  <component name="RunManager" selected="Python.pdf_generator">
     <configuration name="ScoringFormat" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="sleeper-stats" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -102,6 +102,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model/ScoringFormat.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pdf_generator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="sleeper-stats" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pdf_generator.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -175,12 +196,14 @@
     </configuration>
     <list>
       <item itemvalue="Python.ScoringFormat" />
+      <item itemvalue="Python.pdf_generator" />
       <item itemvalue="Python.sleeper_season" />
       <item itemvalue="Python.sleeper" />
       <item itemvalue="Python.report_generator" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.pdf_generator" />
         <item itemvalue="Python.sleeper_season" />
         <item itemvalue="Python.ScoringFormat" />
         <item itemvalue="Python.report_generator" />

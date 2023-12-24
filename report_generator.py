@@ -1,26 +1,45 @@
+from multiprocessing.pool import ThreadPool
+
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.style as mplstyle
 import time
 import logging
+import multiprocessing as mp
 
 from logging.config import fileConfig
-
-from matplotlib.font_manager import FontProperties
-
 from model.SleeperLeague import SleeperLeague
 from model.Week import Week
-from model.Season import Season
+from model.Season import Season, get_weekly_rankings, get_record_up_to_week
 
 fileConfig('logging_config.ini')
 logger = logging.getLogger()
+mplstyle.use('fast')
 
+#matplotlib is not thread safe and the majority of the time that is spent in these functions (which is the majority of the program)
+#is spent in matplotlib. Theres really isnt a way around this that I have been able to think of so as of right now I cant
+#think of a way to speed this up :(
+#multiprocessing is being a bitch
 def generate_all_week_reports(sleeper, all_weeks):
     num_weeks = min(sleeper.league.get_league()['settings']['leg'],sleeper.league.get_league()['settings']['playoff_week_start'])
     logger.info(f"Generating weekly reports for week 1 - week {num_weeks - 1}")
     start = time.time()
+    args = [(sleeper, all_weeks, i) for i in range(1, num_weeks)]
+    # processes = [mp.Process(target=generate_week_report, args=(sleeper, all_weeks, i)) for i in range(1, num_weeks)]
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
+
+    # pool1 = mp.Pool(processes=14)
+    # pool1.starmap(generate_week_report, args)
+    # pool1.close()
+    # pool1.join()
+
     for i in range(1,  num_weeks):
         generate_week_report(sleeper, all_weeks, i)
     logger.info(f"Done [{time.time() - start}]")
+    time.sleep(0.1)
 
 def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     logger.debug(f"Generating weekly report for week {week}")
@@ -33,24 +52,25 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
 
     for user in all_weeks.keys():
         if user not in matchup_gathered:
-            player = all_weeks[user].matchups[week - 1]
-            opponent = all_weeks[all_weeks[user].matchups[week - 1].opponent].matchups[week - 1]
+            opponent = all_weeks[user].matchups[week - 1].opponent
             matchup_gathered.add(user)
             matchup_gathered.add(all_weeks[user].matchups[week - 1].opponent)
-            formatted_match, winner = format_matchup(player, opponent)
+            formatted_match, winner = format_matchup(user, opponent, all_weeks, week)
             week_results.append(formatted_match)
 
             coloring.append(get_cell_coloring(winner, len(column_labels)))
 
-    fig, ax = plt.subplots(1, 1, figsize=(1.4 * len(column_labels), .8 * len(week_results)))
+    fig, ax = plt.subplots(2, 1, figsize=(1.4 * len(column_labels), 1 * len(week_results) * 1.6))
     # creating a 2-dimensional dataframe out of the given data
     df = pd.DataFrame(week_results, columns=column_labels)
 
-    ax.axis('tight')  # turns off the axis lines and labels
-    ax.axis('off')  # changes x and y axis limits such that all data is shown
+    ax[0].axis('tight')  # turns off the axis lines and labels
+    ax[0].axis('off')  # changes x and y axis limits such that all data is shown
+    ax[0].get_xaxis().set_visible(False)
+    ax[0].get_yaxis().set_visible(False)
 
     # plotting data
-    table = ax.table(cellText=df.values,
+    table = ax[0].table(cellText=df.values,
                      colLabels=df.columns,
                      rowLabels=row_labels,
                      rowColours=["#57b56a"] * len(row_labels),
@@ -59,34 +79,78 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
                      loc="center",
                      cellLoc='center')
 
-    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} Week {week} (SCORING FORMAT)", y=0.830)
-    plt.tight_layout()
     table.auto_set_font_size(False)
     table.set_fontsize(9)
-    #plt.subplots_adjust(left=0.2, bottom=0.1)
     table.scale(1, 2)
 
+    ax[0].set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} Week {week} (SCORING FORMAT)", y=0.870)
     cellDict = table.get_celld()
     for key, cell in cellDict.items():
         row, col = key
         if row > 0 and col >= 0:
             cell.set_facecolor(coloring[row - 1][col])
 
+
+    column_labels = ["Team", "Record", "Rank", "Points Scored"]
+    data = []
+    seeding = get_weekly_rankings(all_weeks, week)
+    records = get_record_up_to_week(all_weeks, week)
+    for i in range(len(seeding)):
+        user = all_weeks[seeding[i]]
+        new_rank = i + 1
+
+        if week > 1:
+            previous_rank = all_weeks[seeding[i]].matchups[week - 2].place
+            if (i + 1) < previous_rank:
+                new_rank = f"{(i + 1)}  (\u25B2 {previous_rank - (i + 1)})"
+            elif (i + 1) > previous_rank:
+                new_rank = f"{(i + 1)}  (\u25BC {(i + 1) - previous_rank})"
+            else:
+                new_rank = f"{(i + 1)}  -"
+        row = [user.name, records[user.user_id], new_rank, round(user.points_earned, 2)]
+        data.append(row)
+
+    df = pd.DataFrame(data, columns=column_labels)
+    ax[1].axis('tight')  # turns off the axis lines and labels
+    ax[1].axis('off')  # changes x and y axis limits such that all data is shown
+    ax[1].get_xaxis().set_visible(False)
+    ax[1].get_yaxis().set_visible(False)
+    plt.draw()
+
+    # plotting data
+    table = ax[1].table(cellText=df.values,
+                        colLabels=df.columns,
+                        colColours=["#c9673c"] * len(column_labels),
+                        colWidths=[0.1] * len(column_labels),
+                        loc="center",
+                        cellLoc='center')
+
+    plt.tight_layout()
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    table.scale(1, 2)
+
     plt.savefig(f"reports/week/week_{week}_report",
                 bbox_inches='tight')
-    fig.clf()
-    plt.close()
+
+    plt.close(fig)
+    plt.close('all')
 
 def generate_all_user_report(sleeper: SleeperLeague, all_weeks):
     logger.info("Generating season reports for all users")
     start = time.time()
-    for user_id in all_weeks.keys():
-        generate_user_report(sleeper, all_weeks, user_id)
+    args = [(sleeper, all_weeks, user) for user in all_weeks.keys()]
+    pool1 = mp.Pool(processes=10)
+    pool1.starmap(generate_week_report, args)
+    pool1.close()
+    pool1.join()
+    # for user_id in all_weeks.keys():
+    #     generate_user_report(sleeper, all_weeks, user_id)
     logger.info(f"Done [{time.time() - start}]")
 
 def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
     logger.debug(f"Generating season report for user {all_weeks[user].name}")
-    column_labels = ["Thrown Week?", "Start/Sit Accuracy", "Max Points", "Acual Points", "Team 1", "Team 2",
+    column_labels = ["Thrown Week?", "Start/Sit Accuracy", "Max Points", "Actual Points", "Team 1", "Team 2",
                      "Actual Points", "Max Points", "Start/Sit Accuracy", "Thrown Week?"]
     row_labels = [f"Week {i}" for i in range(1, len(all_weeks[user].matchups) + 1)]
     week_results = []
@@ -94,8 +158,8 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
 
     for matchup in all_weeks[user].matchups:
         week = matchup.week
-        opponent = all_weeks[all_weeks[user].matchups[week - 1].opponent].matchups[week - 1]
-        formatted_match, winner = format_matchup(matchup, opponent)
+        opponent = all_weeks[user].matchups[week - 1].opponent
+        formatted_match, winner = format_matchup(user, opponent, all_weeks, week)
         week_results.append(formatted_match)
         coloring.append(get_cell_coloring(winner, len(column_labels)))
 
@@ -127,13 +191,15 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
     cellDict = table.get_celld()
     for key, cell in cellDict.items():
         row, col = key
-        if row > 0 and col >= 0:
+        if 0 < row <= len(coloring) and col >= 0:
             cell.set_facecolor(coloring[row - 1][col])
-        if col in range(4, 6):
-            cell.set_text_props(fontproperties=FontProperties(weight='bold'))
+        # if col in range(4, 6):
+        #     cell.set_text_props(fontproperties=FontProperties(weight='bold'))
 
+    start = time.time()
     plt.savefig(f"reports/user/{all_weeks[user].name}_all_matchups_report",
                 bbox_inches='tight')
+    logger.debug(f"{time.time() - start}")
     fig.clf()
     plt.close()
 
@@ -206,7 +272,9 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
         if row > 0 and col >= 0:
             cell.set_facecolor(coloring[row - 1][col])
 
+    start = time.time()
     plt.savefig(f"reports/potential_seasons/{all_potential_seasons[user][user].name}_potential_seasons", bbox_inches='tight')
+    logger.debug(f"{time.time() - start}")
     fig.clf()
     plt.close()
 
@@ -229,7 +297,10 @@ def get_cell_coloring(winner, col_length):
     return colors
 
 #Thrown Week? | Start/Sit Accuracy | Max Points | Acual Points | Team 1 | Team 2 | Actual Points | Max Points | Start/Sit Accuracy | Thrown Week?
-def format_matchup(player: Week, opponent: Week):
+def format_matchup(p, o, all_weeks, week):
+    player = all_weeks[p].matchups[week - 1]
+    opponent = all_weeks[o].matchups[week - 1]
+
     team_1_name = player.user.upper()
     team_1_score = player.actual_score
     team_1_best_score = player.max_score
@@ -243,6 +314,9 @@ def format_matchup(player: Week, opponent: Week):
     team_2_throw = ""
 
     winner = 0
+    if player.week > 1:
+        team_1_name = f"{team_1_name} ({all_weeks[p].matchups[week - 2].place})"
+        team_2_name = f"{team_2_name} ({all_weeks[o].matchups[week - 2].place})"
 
     #if team 1 lost, see if they threw
     if team_1_score < team_2_score:

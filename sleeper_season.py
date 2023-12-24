@@ -1,12 +1,13 @@
 import logging
 import time
 from logging.config import fileConfig
-from collections import defaultdict
+import cProfile
 
 import report_generator
 from model.Week import Week
 from model.SleeperLeague import SleeperLeague
 from model.Season import Season
+from model.Season import get_season_rankings
 from model.ScoringFormat import ScoringFormat, get_player_score
 from model.OpponentSeason import OpponentSeason
 
@@ -25,8 +26,28 @@ def get_all_matchup_results(sleeper: SleeperLeague, scoring_format):
             season[k].points_earned += v.actual_score
             season[k].points_possible += round(v.max_score, 2)
             season[k].points_against += round(v.opponent_score, 2)
-    calculate_standings_regular_season(sleeper, season)
+
+        update_season_rankings(season, week_results)
+
+    #calculate_standings_regular_season(sleeper, season)
     return season
+
+def update_season_rankings(season, week_results):
+    for k, v in week_results.items():
+        if v.result == 1:
+            season[k].wins += 1
+        elif v.result == -1:
+            season[k].losses += 1
+        else:
+            season[k].ties += 1
+
+    seeding = get_season_rankings(season)
+
+    for i in range(len(seeding)):
+        week_results[seeding[i]].place = i + 1
+    return
+
+
 
 def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
     logger.info("Gathering results for week %d", week)
@@ -67,6 +88,16 @@ def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
                     user_results_by_week[k].opponent_score = v2.actual_score
                     user_results_by_week[k2].opponent = k
                     user_results_by_week[k2].opponent_score = v.actual_score
+
+                    if v.actual_score < v2.actual_score:
+                        user_results_by_week[k].result = -1
+                        user_results_by_week[k2].result = 1
+                    elif v2.actual_score < v.actual_score:
+                        user_results_by_week[k].result = 1
+                        user_results_by_week[k2].result = -1
+                    else:
+                        user_results_by_week[k].result = 0
+                        user_results_by_week[k2].result = 0
                     break
 
     return user_results_by_week
@@ -264,17 +295,7 @@ def calculate_user_standings_for_all_schedule(sleeper: SleeperLeague, all_season
     return all_potential_season
 
 def find_playoff_teams(season, num_playoff_teams):
-    seeding = []
-    for k, user in season.items():
-        added = False
-        for i in range(len(seeding)):
-            opponent = season[seeding[i]]
-            if user.wins > opponent.wins or (user.wins == opponent.wins and user.points_earned > opponent.points_earned):
-                seeding.insert(i, k)
-                added = True
-                break
-        if not added:
-            seeding.append(k)
+    seeding = get_season_rankings(season)
 
     for i in range(len(seeding)):
         if i < num_playoff_teams:
@@ -291,20 +312,20 @@ def main():
     logger.info("Getting all matchup results")
     start = time.time()
     all_weeks = get_all_matchup_results(sleeper, sf)
+    all_weeks2 = get_all_matchup_results(sleeper, sf)
     logger.info("All matchup results gathered [%s]", time.time() - start)
 
-    report_generator.generate_all_week_reports(sleeper, all_weeks)
-    report_generator.generate_all_user_report(sleeper, all_weeks)
+    #report_generator.generate_all_week_reports(sleeper, all_weeks)
+    #report_generator.generate_all_user_report(sleeper, all_weeks2)
     a = caulculate_standings_for_all_schedules(sleeper, all_weeks)
-    report_generator.generate_all_season_report(sleeper, a)
+    #report_generator.generate_all_season_report(sleeper, a)
 
     #u = calculate_user_standings_for_all_schedule(sleeper, all_weeks, '471079573686054912')
     #report_generator.generate_all_season_report_for_user(sleeper, '471079573686054912', u)
 
     logger.info("Done")
-
-
-
     #report_generator.generate_user_report(sleeper, all_weeks, '735058243386212352')
 
-main()
+if __name__ == '__main__':
+    # cProfile.run('main()', sort='tottime')
+    main()
