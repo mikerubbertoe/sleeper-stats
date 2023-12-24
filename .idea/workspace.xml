@@ -3,9 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="bd9c1739-eca2-4ca0-bf35-cfb93913da7b" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/Season.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/Season.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/Week.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/Week.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/report_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/report_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/hello.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/hello.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sleeper_season.py" beforeDir="false" afterPath="$PROJECT_DIR$/sleeper_season.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -88,7 +86,7 @@
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.pdf_generator">
+  <component name="RunManager" selected="Python.sleeper_season">
     <configuration name="ScoringFormat" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="sleeper-stats" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -203,8 +201,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.pdf_generator" />
         <item itemvalue="Python.sleeper_season" />
+        <item itemvalue="Python.pdf_generator" />
         <item itemvalue="Python.ScoringFormat" />
         <item itemvalue="Python.report_generator" />
         <item itemvalue="Python.sleeper" />
@@ -280,6 +278,17 @@
   </component>
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/sleeper_playoffs.py</url>
+          <line>14</line>
+          <option name="timeStamp" value="157" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="debuggerHistoryManager">
     <expressions id="evaluateExpression">

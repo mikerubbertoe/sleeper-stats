@@ -9,6 +9,7 @@ from model.SleeperLeague import SleeperLeague
 from model.Season import Season
 from model.Season import get_season_rankings
 from model.ScoringFormat import ScoringFormat, get_player_score
+from sleeper_playoffs import calculate_playoffs
 from model.OpponentSeason import OpponentSeason
 
 fileConfig('logging_config.ini')
@@ -314,7 +315,7 @@ def main():
     all_weeks = get_all_matchup_results(sleeper, sf)
     all_weeks2 = get_all_matchup_results(sleeper, sf)
     logger.info("All matchup results gathered [%s]", time.time() - start)
-
+    calculate_playoffs(sleeper, all_weeks)
     #report_generator.generate_all_week_reports(sleeper, all_weeks)
     #report_generator.generate_all_user_report(sleeper, all_weeks2)
     a = caulculate_standings_for_all_schedules(sleeper, all_weeks)
