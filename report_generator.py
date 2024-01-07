@@ -21,7 +21,7 @@ mplstyle.use('fast')
 #think of a way to speed this up :(
 #multiprocessing is being a bitch
 def generate_all_week_reports(sleeper, all_weeks):
-    num_weeks = min(sleeper.league.get_league()['settings']['leg'],sleeper.league.get_league()['settings']['playoff_week_start'])
+    num_weeks = min(sleeper.league['settings']['leg'], sleeper.league['settings']['playoff_week_start'])
     logger.info(f"Generating weekly reports for week 1 - week {num_weeks - 1}")
     start = time.time()
     args = [(sleeper, all_weeks, i) for i in range(1, num_weeks)]
@@ -39,13 +39,12 @@ def generate_all_week_reports(sleeper, all_weeks):
     for i in range(1,  num_weeks):
         generate_week_report(sleeper, all_weeks, i)
     logger.info(f"Done [{time.time() - start}]")
-    time.sleep(0.1)
 
 def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     logger.debug(f"Generating weekly report for week {week}")
     column_labels = ["Thrown Week?", "Start/Sit Accuracy", "Max Points", "Acual Points", "Team 1", "Team 2",
                      "Actual Points", "Max Points", "Start/Sit Accuracy", "Thrown Week?"]
-    row_labels = ["Matchup 1", "Matchup 2", "Matchup 3", "Matchup 4", "Matchup 5"]
+    row_labels = [f"Matchup {i}" for i in range(1, (len(all_weeks.keys()) // 2) + 1)]
     matchup_gathered = set()
     week_results = []
     coloring = []
@@ -57,7 +56,6 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
             matchup_gathered.add(all_weeks[user].matchups[week - 1].opponent)
             formatted_match, winner = format_matchup(user, opponent, all_weeks, week)
             week_results.append(formatted_match)
-
             coloring.append(get_cell_coloring(winner, len(column_labels)))
 
     fig, ax = plt.subplots(2, 1, figsize=(1.4 * len(column_labels), 1 * len(week_results) * 1.6))
@@ -83,7 +81,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     table.set_fontsize(9)
     table.scale(1, 2)
 
-    ax[0].set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} Week {week} (SCORING FORMAT)", y=0.870)
+    ax[0].set_title(f"{sleeper.league['name']} {sleeper.league['season']} Week {week} ({sleeper.scoring_format_name})", y=0.870)
     cellDict = table.get_celld()
     for key, cell in cellDict.items():
         row, col = key
@@ -107,7 +105,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
                 new_rank = f"{(i + 1)}  (\u25BC {(i + 1) - previous_rank})"
             else:
                 new_rank = f"{(i + 1)}  -"
-        row = [user.name, records[user.user_id], new_rank, round(user.points_earned, 2)]
+        row = [user.name, records[user.user_id], new_rank, round(user.matchups[week - 1].points_for_up_to_now, 2)]
         data.append(row)
 
     df = pd.DataFrame(data, columns=column_labels)
@@ -140,28 +138,36 @@ def generate_all_user_report(sleeper: SleeperLeague, all_weeks):
     logger.info("Generating season reports for all users")
     start = time.time()
     args = [(sleeper, all_weeks, user) for user in all_weeks.keys()]
-    pool1 = mp.Pool(processes=10)
-    pool1.starmap(generate_week_report, args)
-    pool1.close()
-    pool1.join()
-    # for user_id in all_weeks.keys():
-    #     generate_user_report(sleeper, all_weeks, user_id)
+    # pool1 = mp.Pool(processes=10)
+    # pool1.starmap(generate_week_report, args)
+    # pool1.close()
+    # pool1.join()
+    for user_id in all_weeks.keys():
+        generate_user_report(sleeper, all_weeks, user_id)
     logger.info(f"Done [{time.time() - start}]")
 
 def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
     logger.debug(f"Generating season report for user {all_weeks[user].name}")
     column_labels = ["Thrown Week?", "Start/Sit Accuracy", "Max Points", "Actual Points", "Team 1", "Team 2",
                      "Actual Points", "Max Points", "Start/Sit Accuracy", "Thrown Week?"]
-    row_labels = [f"Week {i}" for i in range(1, len(all_weeks[user].matchups) + 1)]
+
+    num_weeks = min(len(all_weeks[user].matchups) + 1, int(sleeper.league['settings']['playoff_week_start']))
+    row_labels = [f"Week {i}" for i in range(1, num_weeks)]
     week_results = []
     coloring = []
 
+    counter = 1
     for matchup in all_weeks[user].matchups:
         week = matchup.week
         opponent = all_weeks[user].matchups[week - 1].opponent
         formatted_match, winner = format_matchup(user, opponent, all_weeks, week)
         week_results.append(formatted_match)
         coloring.append(get_cell_coloring(winner, len(column_labels)))
+
+        counter += 1
+        if counter == sleeper.league['settings']['playoff_week_start']:
+            break
+
 
     fig, ax = plt.subplots(1, 1, figsize=(1.4 * len(column_labels), .8 * len(week_results)))
     # creating a 2-dimensional dataframe out of the given data
@@ -182,7 +188,7 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
                      colWidths=[0.1] * 10,
                      loc="center",
                      cellLoc='center')
-    ax.set_title(f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} {all_weeks[user].name}'s Season (SCORING FORMAT)", y=0.800) #800
+    ax.set_title(f"{sleeper.league['name']} {sleeper.league['season']} {all_weeks[user].name}'s Season ({sleeper.scoring_format_name})", y=0.800) #800
     plt.tight_layout()
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -196,10 +202,8 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
         # if col in range(4, 6):
         #     cell.set_text_props(fontproperties=FontProperties(weight='bold'))
 
-    start = time.time()
     plt.savefig(f"reports/user/{all_weeks[user].name}_all_matchups_report",
                 bbox_inches='tight')
-    logger.debug(f"{time.time() - start}")
     fig.clf()
     plt.close()
 
@@ -213,14 +217,16 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
     logger.debug(f"Generating all potential seasons report for user {all_potential_seasons[user][user].name}")
 
     column_labels = [f"{sleeper.get_all_users()[opponent]['display_name']}'s Schedule" for opponent in all_potential_seasons.keys()]
-    #num_weeks = min(sleeper.league.get_league()['settings']['leg'], sleeper.league.get_league()['settings']['playoff_week_start'])
+    #num_weeks = min(sleeper.league['settings']['leg'], sleeper.league['settings']['playoff_week_start'])
     #row_labels = [f"Week {i}" for i in range(1, num_weeks)]
-    row_labels =['Record', 'Seed', 'Playoffs made?']
+    row_labels =['Record', 'Seed', 'Playoffs Made?', 'Playoff Results']
     data = []
     record = []
     seed = []
     playoffs = []
+    playoff_results = []
     coloring = []
+    playoff_result_color = []
     col_color = []
     for opponent in all_potential_seasons.keys():
         season: Season = all_potential_seasons[opponent][user]
@@ -231,11 +237,22 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
             col_color.append('#c6efce')
         else:
             col_color.append('#ffc7ce')
+        playoff_results.append(season.playoff_result)
+        if season.playoff_result == 1:
+            playoff_result_color.append('#FFD700')
+        elif season.playoff_result == 2:
+            playoff_result_color.append('#C0C0C0')
+        elif season.playoff_result == 3:
+            playoff_result_color.append('#CD7F32')
+        else:
+            playoff_result_color.append(col_color[-1])
     data.append(record)
     data.append(seed)
     data.append(playoffs)
-    for i in range(len(data)):
+    data.append(playoff_results)
+    for i in range(len(data) - 1):
         coloring.append(col_color)
+    coloring.append(playoff_result_color)
 
 
     fig, ax = plt.subplots(1, 1, figsize=(1.9 * len(column_labels), 1.2 * len(data)))
@@ -258,7 +275,7 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
                      rowLoc='center',
                      colLoc='center')
     ax.set_title(
-        f"{sleeper.league.get_league()['name']} {sleeper.league.get_league()['season']} {all_potential_seasons[user][user].name}'s all potential seasons (SCORING FORMAT)",
+        f"{sleeper.league['name']} {sleeper.league['season']} {all_potential_seasons[user][user].name}'s all potential seasons ({sleeper.scoring_format_name})",
         y=0.800)  # 800
     plt.tight_layout()
     table.auto_set_font_size(False)
@@ -305,43 +322,24 @@ def format_matchup(p, o, all_weeks, week):
     team_1_score = player.actual_score
     team_1_best_score = player.max_score
     team_1_accuracy = round((team_1_score / team_1_best_score) * 100, 2)
-    team_1_throw = ""
+    team_1_throw = player.thrown_week
 
     team_2_name = opponent.user.upper()
     team_2_score = opponent.actual_score
     team_2_best_score = opponent.max_score
     team_2_accuracy = round((team_2_score / team_2_best_score) * 100, 2)
-    team_2_throw = ""
+    team_2_throw = opponent.thrown_week
 
     winner = 0
     if player.week > 1:
         team_1_name = f"{team_1_name} ({all_weeks[p].matchups[week - 2].place})"
         team_2_name = f"{team_2_name} ({all_weeks[o].matchups[week - 2].place})"
 
-    #if team 1 lost, see if they threw
+    #if team 1 lost, set the winner
     if team_1_score < team_2_score:
-        if team_1_best_score > team_2_score:
-            team_1_throw = "YES"
-        else:
-            team_1_throw = "NO"
         winner = 2
-    #if team 2 lost, see if they threw
+    #if team 2 lost, set the winner
     elif team_2_score < team_1_score:
-        if team_2_best_score > team_1_score:
-            team_2_throw = "YES"
-        else:
-            team_2_throw = "NO"
         winner = 1
-
-    #If they tied, see if either team threw
-    else:
-        if team_1_best_score > team_2_score:
-            team_1_throw = "YES"
-        else:
-            team_1_throw = "NO"
-        if team_2_best_score > team_1_score:
-            team_2_throw = "YES"
-        else:
-            team_2_throw = "NO"
 
     return ([team_1_throw, str(team_1_accuracy) + "%", team_1_best_score, team_1_score, team_1_name, team_2_name, team_2_score, team_2_best_score, str(team_2_accuracy) + "%", team_2_throw], winner)

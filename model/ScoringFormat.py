@@ -6,7 +6,7 @@ logger = logging.getLogger()
 
 class ScoringFormat:
     #defaults to STD PPR scoring
-    def __init__(self, scoring_format='PPR', new_rules=None):
+    def __init__(self, scoring_format=None, new_rules=None):
         scoring = None
         if scoring_format == 'PPR':
             logger.info("Using PPR scoring format")
@@ -26,10 +26,11 @@ class ScoringFormat:
         elif new_rules is None:
             logger.warning("NO CUSTOM SCORING FORMAT FOUND. DEFAULTING TO PPR")
             scoring = get_scoring_map()
-        else:
-            logger.info("Using custom scoring format")
+
+        if new_rules:
+            logger.info("Adding custom scoring format")
             scoring = get_scoring_map()
-            for k, v in new_rules:
+            for k, v in new_rules.items():
                 scoring[k] = v
 
         for k, v in scoring.items():

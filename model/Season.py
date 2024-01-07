@@ -1,9 +1,12 @@
 from collections import defaultdict
 
 class Season:
-    def __init__(self, name='', user_id='', matchups=None, wins=0, losses=0, ties=0, made_playoffs=False, place=0, points_earned=0, points_against=0, points_possible=0):
+    def __init__(self, name='', user_id='', roster_id='', matchups=None, wins=0, losses=0, ties=0, made_playoffs=False, place=0, points_earned=0, points_against=0, points_possible=0):
+        if matchups is None:
+            matchups = list()
         self.name = name
         self.user_id = user_id
+        self.roster_id = roster_id
         self.matchups = matchups
         self.wins = wins
         self.losses = losses
@@ -13,6 +16,7 @@ class Season:
         self.points_earned = points_earned
         self.points_against = points_against
         self.points_possible = points_possible
+        self.playoff_result = 0
 
 
     def __repr__(self):
@@ -42,6 +46,24 @@ def get_season_rankings(seasons):
             seeding.append(k)
     return seeding
 
+def get_original_season_rankings(rosters):
+    seeding = []
+    for roster in rosters.values():
+        wins = roster['settings']['wins']
+        losses = roster['settings']['losses']
+        ties = roster['settings']['ties']
+        points_earned = roster['settings']['fpts'] + (roster['settings']['fpts_decimal'] / 100)
+        added = False
+        for i in range(len(seeding)):
+            opponent = seeding[i]
+            if wins > opponent[1] or (wins == opponent[1] and points_earned > opponent[4]):
+                seeding.insert(i, (roster['roster_id'], wins, losses, ties, points_earned))
+                added = True
+                break
+        if not added:
+            seeding.append((roster['roster_id'], wins, losses, ties, points_earned))
+
+    return [s[0] for s in seeding]
 def get_weekly_rankings(seasons, week):
     seeding = []
     for k, user in seasons.items():
