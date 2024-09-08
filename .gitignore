@@ -1,7 +1,6 @@
-reports/**
 /.idea/
-/venv/**
-/__pycache__/**
-/model/__pycache__/**
 /venv/
+/__pycache__/
+/model/__pycache__/
+
 /reports/
