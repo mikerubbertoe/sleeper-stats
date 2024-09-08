@@ -18,7 +18,6 @@ class Season:
         self.points_possible = points_possible
         self.playoff_result = 0
 
-
     def __repr__(self):
         return f"{self.name}: {self.wins}-{self.losses}-{self.ties}"
 
@@ -78,7 +77,7 @@ def get_weekly_rankings(seasons, week):
             seeding.append(k)
     return seeding
 
-def get_record_up_to_week(seasons, week):
+def get_record_up_to_week(seasons, week, wins_above_median_active):
     partial_records = defaultdict(Season)
     for i in range(week):
         for k, user in seasons.items():
@@ -89,6 +88,16 @@ def get_record_up_to_week(seasons, week):
                 partial_records[k].losses += 1
             else:
                 partial_records[k].ties += 1
+
+            if wins_above_median_active:
+                week_median = user.matchups[i].week_median
+                week_score = user.matchups[i].actual_score
+                if week_score > week_median:
+                    partial_records[k].wins += 1
+                elif week_score < week_median:
+                    partial_records[k].losses += 1
+                else:
+                    partial_records[k].ties += 1
     for k, v in partial_records.items():
         partial_records[k] = v.get_record()
     return partial_records

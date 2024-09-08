@@ -1,15 +1,13 @@
-from multiprocessing.pool import ThreadPool
+import os.path
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.style as mplstyle
 import time
 import logging
-import multiprocessing as mp
 
 from logging.config import fileConfig
 from model.SleeperLeague import SleeperLeague
-from model.Week import Week
 from model.Season import Season, get_weekly_rankings, get_record_up_to_week
 
 fileConfig('logging_config.ini')
@@ -48,7 +46,6 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     matchup_gathered = set()
     week_results = []
     coloring = []
-
     for user in all_weeks.keys():
         if user not in matchup_gathered:
             opponent = all_weeks[user].matchups[week - 1].opponent
@@ -73,7 +70,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
                      rowLabels=row_labels,
                      rowColours=["#57b56a"] * len(row_labels),
                      colColours=["#c9673c"] * len(column_labels),
-                     colWidths=[0.1] * len(column_labels),
+                     #colWidths=[0.1] * len(column_labels),
                      loc="center",
                      cellLoc='center')
 
@@ -92,7 +89,8 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     column_labels = ["Team", "Record", "Rank", "Points Scored"]
     data = []
     seeding = get_weekly_rankings(all_weeks, week)
-    records = get_record_up_to_week(all_weeks, week)
+    records = get_record_up_to_week(all_weeks, week, sleeper.wins_above_median_active)
+    week_median = round(next(iter(all_weeks.values())).matchups[week - 1].week_median, 2)
     for i in range(len(seeding)):
         user = all_weeks[seeding[i]]
         new_rank = i + 1
@@ -109,6 +107,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
         data.append(row)
 
     df = pd.DataFrame(data, columns=column_labels)
+    ax[1].text(0.025, 0.064, f'Week Median: {week_median}', color='black', bbox=dict(facecolor='#c9673c', edgecolor='black', boxstyle='square, pad=1.0'))
     ax[1].axis('tight')  # turns off the axis lines and labels
     ax[1].axis('off')  # changes x and y axis limits such that all data is shown
     ax[1].get_xaxis().set_visible(False)
@@ -128,7 +127,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
     table.set_fontsize(9)
     table.scale(1, 2)
 
-    plt.savefig(f"reports/week/week_{week}_report",
+    plt.savefig(f"reports/{sleeper.league['name']}/week/week_{week}_report",
                 bbox_inches='tight')
 
     plt.close(fig)
@@ -185,7 +184,7 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
                      rowLabels=row_labels,
                      rowColours=["#57b56a"] * len(row_labels),
                      colColours=["#c9673c"] * len(column_labels),
-                     colWidths=[0.1] * 10,
+                     colWidths=[0.1] * len(column_labels),
                      loc="center",
                      cellLoc='center')
     ax.set_title(f"{sleeper.league['name']} {sleeper.league['season']} {all_weeks[user].name}'s Season ({sleeper.scoring_format_name})", y=0.800) #800
@@ -202,7 +201,7 @@ def generate_user_report(sleeper: SleeperLeague, all_weeks, user):
         # if col in range(4, 6):
         #     cell.set_text_props(fontproperties=FontProperties(weight='bold'))
 
-    plt.savefig(f"reports/user/{all_weeks[user].name}_all_matchups_report",
+    plt.savefig(f"reports/{sleeper.league['name']}/user/{all_weeks[user].name}_all_matchups_report",
                 bbox_inches='tight')
     fig.clf()
     plt.close()
@@ -269,7 +268,6 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
                      rowLabels=row_labels,
                      rowColours=["#57b56a"] * len(row_labels),
                      colColours=["#c9673c"] * len(column_labels),
-                     colWidths=[0.1] * 10,
                      loc="center",
                      cellLoc='center',
                      rowLoc='center',
@@ -289,13 +287,88 @@ def generate_all_season_report_for_user(sleeper: SleeperLeague, user, all_potent
         if row > 0 and col >= 0:
             cell.set_facecolor(coloring[row - 1][col])
 
-    start = time.time()
-    plt.savefig(f"reports/potential_seasons/{all_potential_seasons[user][user].name}_potential_seasons", bbox_inches='tight')
-    logger.debug(f"{time.time() - start}")
+    plt.savefig(f"reports/{sleeper.league['name']}/potential_season/{all_potential_seasons[user][user].name}_potential_seasons", bbox_inches='tight')
     fig.clf()
     plt.close()
 
 def generate_season_report():
+    return
+
+def generate_user_statistics_report(sleeper: SleeperLeague, season, season_stats):
+    column_labels = [user.name for user in season.values()]
+    row_labels = ["Points Scored", "Points Against", "Overall Accuracy", "Opponent Accuracy", "Average Score", "Std Dev", "Highest Score", "Lowest Score", "Weeks Thrown"]
+    data = []
+
+    for user in season.values():
+        row = []
+        stats = season_stats[user.user_id]
+        row.append(round(user.points_earned, 2))
+        row.append(round(user.points_against, 2))
+        row.append(f'{stats.overallAccuracy}%')
+        row.append(f'{stats.opponentAccuracy}%')
+        row.append(stats.averageScore)
+        row.append(stats.averageScoreStdDeviation)
+
+        highestScoreWeekResult = 'W'
+        if user.matchups[stats.highestScoreWeek - 1].result == 1:
+            highestScoreWeekResult = 'W'
+        elif user.matchups[stats.highestScoreWeek - 1].result == -1:
+            highestScoreWeekResult = 'L'
+        else:
+            highestScoreWeekResult = 'T'
+
+        lowestScoreWeekResult = 'L'
+        if user.matchups[stats.lowestScoreWeek - 1].result == 1:
+            lowestScoreWeekResult = 'W'
+        elif user.matchups[stats.lowestScoreWeek - 1].result == -1:
+            lowestScoreWeekResult = 'L'
+        else:
+            lowestScoreWeekResult = 'T'
+
+        row.append(f'{stats.highestScore} ({highestScoreWeekResult}) (Week {stats.highestScoreWeek})')
+        row.append(f'{stats.lowestScore} ({lowestScoreWeekResult}) (Week {stats.lowestScoreWeek})')
+        row.append(stats.numberWeeksThrown)
+        data.append(row)
+
+    new_data = []
+    for i in range(len(data[0])):
+        new_data.append([])
+        for j in range(len(data)):
+            new_data[i].append(data[j][i])
+    fig, ax = plt.subplots(1, 1, figsize=(1.9 * len(column_labels), 1.2 * len(new_data)))
+    df = pd.DataFrame(new_data, columns=column_labels)
+
+    ax.axis('tight')  # turns off the axis lines and labels
+    ax.axis('off')  # changes x and y axis limits such that all data is shown
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+
+    table = ax.table(cellText=df.values,
+                     colLabels=df.columns,
+                     rowLabels=row_labels,
+                     rowColours=["#57b56a"] * len(row_labels),
+                     colColours=["#c9673c"] * len(column_labels),
+                     loc="center",
+                     cellLoc='center',
+                     rowLoc='center',
+                     colLoc='center')
+    ax.set_title(
+        f"{sleeper.league['name']} {sleeper.league['season']} Statistics ({sleeper.scoring_format_name})",
+        y=0.7350)  # 800
+
+    table.auto_set_font_size(False)
+    table.auto_set_column_width(col=list(range(len(df.columns))))
+    table.set_fontsize(11)
+
+    table.scale(1, 2.25)
+    plt.draw()
+    plt.tight_layout()
+
+    plt.savefig(f"reports/{sleeper.league['name']}/{sleeper.league['name']}_{sleeper.league['season']}_statistics",
+                bbox_inches='tight')
+    fig.clf()
+    plt.close()
     return
 
 def get_cell_coloring(winner, col_length):
@@ -343,3 +416,18 @@ def format_matchup(p, o, all_weeks, week):
         winner = 1
 
     return ([team_1_throw, str(team_1_accuracy) + "%", team_1_best_score, team_1_score, team_1_name, team_2_name, team_2_score, team_2_best_score, str(team_2_accuracy) + "%", team_2_throw], winner)
+
+
+def create_or_clear_folder(folder_dir):
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/potential_season")}', exist_ok=True)
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/user")}', exist_ok=True)
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week")}', exist_ok=True)
+    current_path = f'{folder_dir}/potential_season'
+    for f in os.listdir(current_path):
+        os.remove(os.path.join(current_path, f))
+    current_path = f'{folder_dir}/user'
+    for f in os.listdir(current_path):
+        os.remove(os.path.join(current_path, f))
+    current_path = f'{folder_dir}/week'
+    for f in os.listdir(current_path):
+        os.remove(os.path.join(current_path, f))

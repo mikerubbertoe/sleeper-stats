@@ -13,6 +13,7 @@ class Week:
         self.current_rank = rank
         self.thrown_week = thrown_week
         self.points_for_up_to_now = 0
+        self.week_median = 0
 
     def __repr__(self):
         result = ''

@@ -1,8 +1,8 @@
 import logging
-import time
+from statistics import stdev, mean, median
 from logging.config import fileConfig
 
-import report_generator
+from model.SeasonStats import SeasonStats
 from model.Week import Week, set_thrown_week
 from model.SleeperLeague import SleeperLeague
 from model.Season import Season
@@ -20,18 +20,26 @@ def get_all_matchup_results(sleeper: SleeperLeague, scoring_format):
     num_weeks = sleeper.league['settings']['leg']
     for week in range(1, num_weeks + 1):
         week_results = get_matchup_results_by_week(sleeper, week, scoring_format)
+        all_scores = []
         for k, v in week_results.items():
             season[k].matchups.append(v)
             if week < sleeper.league['settings']['playoff_week_start']:
                 season[k].points_earned += v.actual_score
                 season[k].points_possible += round(v.max_score, 2)
                 season[k].points_against += round(v.opponent_score, 2)
+                all_scores.append(v.actual_score)
             if week > 1:
                 v.points_for_up_to_now = season[k].matchups[week - 2].points_for_up_to_now + v.actual_score
             else:
                 v.points_for_up_to_now = v.actual_score
         if week < sleeper.league['settings']['playoff_week_start']:
-            update_season_rankings(season, week_results)
+            all_scores = sorted(all_scores)
+            middle_index = (len(all_scores) // 2) - 1
+            week_median = (all_scores[middle_index] + all_scores[middle_index + 1]) / 2
+
+            update_season_rankings(season, week_results, sleeper.wins_above_median_active, week_median)
+            for k, v in week_results.items():
+                v.week_median = week_median
 
     for k, v in sleeper.get_all_rosters().items():
         season[v['owner_id']].roster_id = k
@@ -39,7 +47,7 @@ def get_all_matchup_results(sleeper: SleeperLeague, scoring_format):
     find_playoff_teams(season, sleeper.league['settings']['playoff_teams'])
     return season
 
-def update_season_rankings(season, week_results):
+def update_season_rankings(season, week_results, wins_above_median_active, week_median):
     for k, v in week_results.items():
         if v.result == 1:
             season[k].wins += 1
@@ -48,6 +56,13 @@ def update_season_rankings(season, week_results):
         else:
             season[k].ties += 1
 
+        if wins_above_median_active:
+            if v.actual_score > week_median:
+                season[k].wins += 1
+            elif v.actual_score < week_median:
+                season[k].losses += 1
+            else:
+                season[k].ties += 1
     seeding = get_season_rankings(season)
 
     for i in range(len(seeding)):
@@ -64,7 +79,7 @@ def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
     matchups = sleeper.league_object.get_matchups(week)
     logger.debug("Matchups gathered")
     logger.debug("Gathering stats for week %d", week)
-    week_stats = sleeper.stats.get_week_stats('regular', '2023', week)
+    week_stats = sleeper.stats.get_week_stats('regular', sleeper.league['season'], week)
     logger.debug("Stats gathered")
 
     #For each matchup in the week, collect the starters points and find the maximum score for the scoring format provided
@@ -80,7 +95,7 @@ def get_matchup_results_by_week(sleeper: SleeperLeague, week, scoring_format):
 
         #calculate the max score based on the scoring format used in the league
         for player in best_lineup:
-            max_score += matchup['players_points'][player]
+            max_score +=  get_player_score(player, week_stats, scoring_format)
         new_week = Week(week, user['display_name'], round(max_score, 2), round(actual_score, 2), best_lineup, matchup['starters'], matchup['matchup_id'], 0, 0)
         user_results_by_week[user['user_id']] = new_week
 
@@ -107,6 +122,7 @@ def calculate_best_lineup(sleeper, user, week, matchup, week_stats, scoring_form
         'QB': [],
         'TE': [],
         'FLEX': [],
+        'SUPER_FLEX' : [],
         'K': [],
         'DST': []
     }
@@ -129,6 +145,8 @@ def calculate_best_lineup(sleeper, user, week, matchup, week_stats, scoring_form
         for position in p['fantasy_positions']:
 
             try:
+                if 'SUPER_FLEX' in sleeper.league['roster_positions'] and position != 'K':
+                    sort_player_score(positions['SUPER_FLEX'], player, week_stats, scoring_format)
                 if position != 'QB' and position != 'K' and position in positions.keys():
                     sort_player_score(positions['FLEX'], player, week_stats, scoring_format)
                 sort_player_score(positions[position], player, week_stats, scoring_format)
@@ -178,10 +196,25 @@ def calculate_best_lineup(sleeper, user, week, matchup, week_stats, scoring_form
     best_lineup.extend(positions['RB'][:sleeper.numRB])
     best_lineup.extend(positions['WR'][:sleeper.numWR])
     best_lineup.extend(positions['TE'][:sleeper.numTE])
+    num_super_flex = sleeper.league['roster_positions'].count('SUPER_FLEX')
+    super_flex_count = 0
+    num_flex = sleeper.league['roster_positions'].count('FLEX')
+    flex_count = 0
+
     for flex_player in positions['FLEX']:
+        if flex_count >= num_flex:
+            break
         if flex_player not in best_lineup:
             best_lineup.append(flex_player)
+            flex_count += 1
+
+    for super_flex_player in positions['SUPER_FLEX']:
+        if super_flex_count >= num_super_flex:
             break
+        if super_flex_player not in best_lineup:
+            best_lineup.append(super_flex_player)
+            super_flex_count += 1
+
     best_lineup.extend(positions['K'][:sleeper.numK])
     best_lineup.extend(positions['DST'][:sleeper.numDST])
     return best_lineup
@@ -276,11 +309,14 @@ def calculate_user_standings_for_all_schedule(sleeper: SleeperLeague, all_season
                 potential_seasons[u].matchups.append(week_result)
                 current_week_results[u] = week_result
 
+            week_total = 0
             for v in current_week_results.values():
                 set_thrown_week(v, current_week_results[v.opponent])
+                week_total += v.actual_score
 
             if week < sleeper.league['settings']['playoff_week_start']:
-                update_season_rankings(potential_seasons, current_week_results)
+                week_median = week_total / len(current_week_results.values())
+                update_season_rankings(potential_seasons, current_week_results, sleeper.wins_above_median_active, week_median)
 
         find_playoff_teams(potential_seasons, sleeper.league['settings']['playoff_teams'])
         all_potential_season[original_season_id] = potential_seasons
@@ -294,6 +330,36 @@ def find_playoff_teams(season, num_playoff_teams):
             season[seeding[i]].made_playoffs = True
         season[seeding[i]].place = i + 1
 
+def calculate_user_statistics(sleeper: SleeperLeague, season):
+    all_user_statistics = dict()
+    for k, user in season.items():
+        playerStats = SeasonStats()
+        opponentPossibleScore = 0
+        opponentActualScore = 0
+        scores = []
+        for week in user.matchups:
+            if week.week < sleeper.league['settings']['playoff_week_start']:
+                opponentActualScore += week.opponent_score
+                opponentPossibleScore += season[week.opponent].matchups[week.week - 1].max_score
+                scores.append(week.actual_score)
+
+                if week.actual_score > playerStats.highestScore:
+                    playerStats.highestScore = week.actual_score
+                    playerStats.highestScoreWeek = week.week
+                elif week.actual_score < playerStats.lowestScore:
+                    playerStats.lowestScore = week.actual_score
+                    playerStats.lowestScoreWeek = week.week
+
+                playerStats.numberWeeksThrown = playerStats.numberWeeksThrown + 1 if week.thrown_week == 'YES' else playerStats.numberWeeksThrown
+
+        playerStats.opponentAccuracy = round((opponentActualScore / opponentPossibleScore) * 100, 2)
+        playerStats.overallAccuracy = round((user.points_earned / user.points_possible) * 100, 2)
+        playerStats.averageScore = round(mean(scores), 2)
+        playerStats.medianScore = round(median(scores), 2)
+        playerStats.averageScoreStdDeviation = round(stdev(scores), 2)
+
+        all_user_statistics[k] = playerStats
+    return all_user_statistics
 # def main():
 #     logger.info("Starting")
 #     start = time.time()

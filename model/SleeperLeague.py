@@ -1,5 +1,6 @@
 import sleeper_wrapper as Sleeper
 from model.ScoringFormat import ScoringFormat
+from requests.exceptions import HTTPError
 class SleeperLeague:
     def __init__(self, league_id=-1):
         self.league_id = league_id
@@ -7,6 +8,11 @@ class SleeperLeague:
         self.stats = Sleeper.Stats()
         self.league_object = Sleeper.League(league_id)
         self.league = Sleeper.League(league_id).get_league()
+        self.wins_above_median_active = self.league['settings']['league_average_match']
+
+        if isinstance(self.league, HTTPError):
+            return
+
         self.users = Sleeper.League(league_id).get_users()
         self.rosters = Sleeper.League(league_id).get_rosters()
         self.numQB   = self.league['roster_positions'].count('QB')
@@ -48,3 +54,9 @@ class SleeperLeague:
         if self.scoring_format.__getattribute__('rec') == 0.0:
             return "STD"
         return "CUSTOM"
+
+    def update_scoring_settings(self, new_rules):
+        if new_rules is None:
+            return
+        self.scoring_format = ScoringFormat(new_rules=new_rules)
+        self.scoring_format_name = self.get_scoring_type()
