@@ -1,1 +1,4 @@
-report/**
+reports/**
+.idea
+venv/**
+__pycache__/**
