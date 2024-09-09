@@ -1,7 +1,8 @@
 from collections import defaultdict
 
 class Season:
-    def __init__(self, name='', user_id='', roster_id='', matchups=None, wins=0, losses=0, ties=0, made_playoffs=False, place=0, points_earned=0, points_against=0, points_possible=0):
+    def __init__(self, name='', user_id='', roster_id='', matchups=None, wins=0, losses=0, ties=0, made_playoffs=False,
+                 place=0, points_earned=0, points_against=0, points_possible=0):
         if matchups is None:
             matchups = list()
         self.name = name
@@ -17,6 +18,8 @@ class Season:
         self.points_against = points_against
         self.points_possible = points_possible
         self.playoff_result = 0
+        self.reception_tds = 0
+        self.rush_tds = 0
 
     def __repr__(self):
         return f"{self.name}: {self.wins}-{self.losses}-{self.ties}"

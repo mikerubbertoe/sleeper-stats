@@ -1,5 +1,6 @@
 class Week:
-    def __init__(self, week=0, user="", max_score=0, actual_score=0, best_lineup=None, actual_lineup=None, matchup_id=0, opponent=0, opponent_score=0, result=0, rank=0, thrown_week=''):
+    def __init__(self, week=0, user="", max_score=0, actual_score=0, best_lineup=None, actual_lineup=None, matchup_id=0,
+                 opponent=0, opponent_score=0, result=0, rank=0, thrown_week='', rush_tds=0, rec_tds=0):
         self.week = week
         self.user = user
         self.max_score = max_score
@@ -14,6 +15,8 @@ class Week:
         self.thrown_week = thrown_week
         self.points_for_up_to_now = 0
         self.week_median = 0
+        self.rush_tds = rush_tds
+        self.rec_tds = rec_tds
 
     def __repr__(self):
         result = ''

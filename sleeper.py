@@ -28,18 +28,7 @@ def main():
 
     #sleeper.scoring_format = ScoringFormat('HALF PPFD')
 
-    # new_rules = {'fgm_50p': 0.0,
-    #              'fgm_40_49': 0.0,
-    #              'fgm_30_39': 0.0,
-    #              'fgm_20_29': 0.0,
-    #              'fgm_0_19': 0.0,
-    #              'xpm': 0.0,
-    #              'fgmiss': 0.0,
-    #              'xpmiss': 0.0,
-    #              'fgm_yds_over_30': 0.0
-    #              }
-    #
-    # sleeper.update_scoring_settings(new_rules)
+
     logger.info("Getting all matchup results")
 
 

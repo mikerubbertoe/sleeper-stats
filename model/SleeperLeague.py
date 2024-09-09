@@ -9,6 +9,7 @@ class SleeperLeague:
         self.league_object = Sleeper.League(league_id)
         self.league = Sleeper.League(league_id).get_league()
         self.wins_above_median_active = self.league['settings']['league_average_match']
+        self.player_weekly_rankings = dict()
 
         if isinstance(self.league, HTTPError):
             return

@@ -47,12 +47,6 @@ def main():
                       [sg.Radio('Points per First Down (PPFD)', "SimpleChoices", default=False, size=(70, 1), enable_events=True, k='PPFD')],
                       [sg.Radio('0.5 Points per Reception and 0.5 Points per First Down (HALF PPR + HALF PPFD)', "SimpleChoices", default=False, size=(70, 1), enable_events=True, k='HALF_PPFD')]]
 
-
-    custom_choices2 = [[sg.Checkbox('PPR',  size=(10, 1), k='-PPR-')],
-                      [sg.Checkbox('HALF PPR', size=(10, 1), k='-HALF_PPR-')],
-                      [sg.Checkbox('STD', size=(10, 1), k='-STD-')],
-                      [sg.Checkbox('PPFD', size=(10, 1), k='-PPFD-')],
-                      [sg.Checkbox('HALF PPR + HALF PPFD', size=(20, 1), k='-HALFPPRFD-')]]
     sub_tabs = [[sg.TabGroup([[
         sg.Tab('Passing', generate_columns(Passing_Stats)),
         sg.Tab('Rushing', generate_columns(Rushing_Stats)),
@@ -67,6 +61,12 @@ def main():
         sg.Tab('Punting', generate_columns(Punting_Stats))]],
         key='-TAB GROUP 2-', expand_x=True, expand_y=True)]]
 
+    report_tab = [[sg.Checkbox('Season Statistics',  size=(20, 1), k='-SEASON_STATS-', default=True)],
+                      [sg.Checkbox('Week Stats', size=(20, 1), k='-WEEK_STATS-', default=True)],
+                      [sg.Checkbox('User Matchups', size=(20, 1), k='-USER_MATCHUPS-', default=True)],
+                      [sg.Checkbox('Potential Seasons For Each User', size=(30, 1), k='-POTENTIAL_SEASONS-', default=True)],
+                      [sg.Checkbox('Weekly Player Rankings', size=(20, 1), k='-WEEK_PLAYER_RANK-', default=True)]]
+
     sg.set_options(font=("Arial Bold", 14))
     layout = [[sg.Text('Enter League ID:'), sg.Input(size=(20, 1), key='league_id'),
                sg.Button('Load League', key='load_league', enable_events=True),
@@ -75,7 +75,8 @@ def main():
 
     sg.set_options(font=("Arial", 10))
     layout += [[sg.Checkbox('Wins Above Median', default=False, size=(70, 1), enable_events=True, k='-WINS ABOVE MEDIAN-')]]
-    layout += [[sg.TabGroup([[sg.Tab('Standard Format', simple_choices), sg.Tab('Custom', sub_tabs)]], key='-TAB GROUP-', expand_x=True, expand_y=True)]]
+    layout += [[sg.TabGroup([[sg.Tab('Standard Format', simple_choices), sg.Tab('Custom', sub_tabs),
+                              sg.Tab('Report Options', report_tab)]], key='-TAB GROUP-', expand_x=True, expand_y=True)]]
     layout += [[sg.Button('Submit', k='submit', disabled=True ,enable_events=True)]]
     window = sg.Window('Control Panel', layout, True, grab_anywhere=True, resizable=True , finalize=True, keep_on_top=True)
     # Create the Window
@@ -125,13 +126,20 @@ def main():
                 sleeper_playoffs.calculate_potential_playoffs_for_user(sleeper, seasons,
                                                                        sleeper.league['settings']['playoff_week_start'])
 
-            logger.info("calculating player statistics")
+            logger.info("Calculating player statistics")
             user_statistics = sleeper_season.calculate_user_statistics(sleeper, all_weeks_current_format)
             report_generator.create_or_clear_folder(f"reports/{sleeper.league['name']}")
-            report_generator.generate_user_statistics_report(sleeper, all_weeks_current_format, user_statistics)
-            report_generator.generate_all_week_reports(sleeper, all_weeks_current_format)
-            report_generator.generate_all_user_report(sleeper, all_weeks_current_format)
-            report_generator.generate_all_season_report(sleeper, all_potential_seasons_current_format)
+            if values['-SEASON_STATS-']:
+                report_generator.generate_user_statistics_report(sleeper, all_weeks_current_format, user_statistics)
+            if values['-WEEK_STATS-']:
+                report_generator.generate_all_week_reports(sleeper, all_weeks_current_format)
+            if values['-WEEK_PLAYER_RANK-']:
+                report_generator.generate_player_all_week_rankings(sleeper, all_weeks_current_format)
+            if values['-USER_MATCHUPS-']:
+                report_generator.generate_all_user_report(sleeper, all_weeks_current_format)
+            if values['-POTENTIAL_SEASONS-']:
+                report_generator.generate_all_season_report(sleeper, all_potential_seasons_current_format)
+
     window.close()
 
 def clear_options(window):

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mplstyle
 import time
 import logging
+from colour import Color
 
 from logging.config import fileConfig
 from model.SleeperLeague import SleeperLeague
@@ -22,17 +23,6 @@ def generate_all_week_reports(sleeper, all_weeks):
     num_weeks = min(sleeper.league['settings']['leg'], sleeper.league['settings']['playoff_week_start'])
     logger.info(f"Generating weekly reports for week 1 - week {num_weeks - 1}")
     start = time.time()
-    args = [(sleeper, all_weeks, i) for i in range(1, num_weeks)]
-    # processes = [mp.Process(target=generate_week_report, args=(sleeper, all_weeks, i)) for i in range(1, num_weeks)]
-    # for p in processes:
-    #     p.start()
-    # for p in processes:
-    #     p.join()
-
-    # pool1 = mp.Pool(processes=14)
-    # pool1.starmap(generate_week_report, args)
-    # pool1.close()
-    # pool1.join()
 
     for i in range(1,  num_weeks):
         generate_week_report(sleeper, all_weeks, i)
@@ -136,11 +126,7 @@ def generate_week_report(sleeper: SleeperLeague, all_weeks, week):
 def generate_all_user_report(sleeper: SleeperLeague, all_weeks):
     logger.info("Generating season reports for all users")
     start = time.time()
-    args = [(sleeper, all_weeks, user) for user in all_weeks.keys()]
-    # pool1 = mp.Pool(processes=10)
-    # pool1.starmap(generate_week_report, args)
-    # pool1.close()
-    # pool1.join()
+
     for user_id in all_weeks.keys():
         generate_user_report(sleeper, all_weeks, user_id)
     logger.info(f"Done [{time.time() - start}]")
@@ -295,8 +281,11 @@ def generate_season_report():
     return
 
 def generate_user_statistics_report(sleeper: SleeperLeague, season, season_stats):
+    logger.info("Generating season statistics for all users")
+    start = time.time()
     column_labels = [user.name for user in season.values()]
-    row_labels = ["Points Scored", "Points Against", "Overall Accuracy", "Opponent Accuracy", "Average Score", "Std Dev", "Highest Score", "Lowest Score", "Weeks Thrown"]
+    row_labels = ["Points Scored", "Points Against", "Overall Accuracy", "Opponent Accuracy", "Average Score",
+                  "Std Dev", "Highest Score", "Lowest Score", "Weeks Thrown", "Total Touchdowns"]
     data = []
 
     for user in season.values():
@@ -328,13 +317,10 @@ def generate_user_statistics_report(sleeper: SleeperLeague, season, season_stats
         row.append(f'{stats.highestScore} ({highestScoreWeekResult}) (Week {stats.highestScoreWeek})')
         row.append(f'{stats.lowestScore} ({lowestScoreWeekResult}) (Week {stats.lowestScoreWeek})')
         row.append(stats.numberWeeksThrown)
+        row.append(int(stats.totalTouchdowns))
         data.append(row)
 
-    new_data = []
-    for i in range(len(data[0])):
-        new_data.append([])
-        for j in range(len(data)):
-            new_data[i].append(data[j][i])
+    new_data = pivot_data(data)
     fig, ax = plt.subplots(1, 1, figsize=(1.9 * len(column_labels), 1.2 * len(new_data)))
     df = pd.DataFrame(new_data, columns=column_labels)
 
@@ -369,7 +355,110 @@ def generate_user_statistics_report(sleeper: SleeperLeague, season, season_stats
                 bbox_inches='tight')
     fig.clf()
     plt.close()
+    logger.info(f"Done [{time.time() - start}]")
     return
+
+def generate_player_all_week_rankings(sleeper, all_weeks):
+    num_weeks = min(sleeper.league['settings']['leg'], sleeper.league['settings']['playoff_week_start'])
+    logger.info(f"Generating player ranking reports for week 1 - week {num_weeks - 1}")
+    start = time.time()
+
+    for i in range(1, num_weeks):
+        generate_player_week_rankings(sleeper, all_weeks, i)
+    logger.info(f"Done [{time.time() - start}]")
+
+
+def generate_player_week_rankings(sleeper: SleeperLeague, all_weeks, week):
+    logger.debug(f"Generating weekly ranking report for week {week}")
+
+    column_labels = [user.name for user in all_weeks.values()]
+    row_labels = []
+    user_result = []
+    data = []
+    coloring = []
+    #Get the number of position players in the league
+    for position in sleeper.league['roster_positions']:
+        if position != 'BN':
+            row_labels.append(position)
+    row_labels.append("RESULT")
+
+    #Generate the position rank for the week given the current scoring system
+    for user in all_weeks.values():
+        row = []
+        for player in user.matchups[week - 1].actual_lineup:
+            player_position = sleeper.allPlayers[player]['fantasy_positions'][0]
+            try:
+                player_ranking = sleeper.player_weekly_rankings[week][player_position].index(player)
+            except ValueError:
+                player_ranking = 998
+            row.append(f'{player_position} {player_ranking + 1}')
+
+        if user.matchups[week - 1].result == 1:
+            user_result.append('WIN')
+        elif user.matchups[week - 1].result == -1:
+            user_result.append('LOSS')
+        else:
+            user_result.append('TIE')
+        data.append(row)
+
+    #pivot the data and get the cell coloring
+    data = pivot_data(data)
+    for position_row in data:
+        coloring.append(get_ranking_colors(position_row))
+
+    data.append(user_result)
+    result_colors = []
+    for result in user_result:
+        if result == 'WIN':
+            result_colors.append(Color('green').hex)
+        elif result == 'LOSS':
+            result_colors.append(Color('red').hex)
+        else:
+            result_colors.append(Color('yellow').hex)
+    coloring.append(result_colors)
+
+    fig, ax = plt.subplots(1, 1, figsize=(1.4 * len(column_labels), 1 * len(row_labels) * 1.2))
+    # creating a 2-dimensional dataframe out of the given data
+    df = pd.DataFrame(data, columns=column_labels)
+
+    ax.axis('tight')  # turns off the axis lines and labels
+    ax.axis('off')  # changes x and y axis limits such that all data is shown
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # plotting data
+    table = ax.table(cellText=df.values,
+                        colLabels=df.columns,
+                        rowLabels=row_labels,
+                        rowColours=["#57b56a"] * len(row_labels),
+                        colColours=["#c9673c"] * len(column_labels),
+                        # colWidths=[0.1] * len(column_labels),
+                        loc="center",
+                        cellLoc='center',
+                        rowLoc='center',
+                        colLoc='center')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    table.scale(1, 2)
+    plt.draw()
+    plt.tight_layout()
+
+    cellDict = table.get_celld()
+    for key, cell in cellDict.items():
+        row, col = key
+        if row > 0 and col >= 0:
+            cell.set_facecolor(coloring[row - 1][col])
+            cell.set_alpha(0.5)
+
+    ax.set_title(f"{sleeper.league['name']} {sleeper.league['season']} Player Rankings Week {week} ({sleeper.scoring_format_name})",
+                    y=0.7350)
+
+    plt.savefig(f"reports/{sleeper.league['name']}/week_rank/week_{week}_ranking_report",
+                bbox_inches='tight')
+
+    plt.close(fig)
+    plt.close('all')
 
 def get_cell_coloring(winner, col_length):
     colors = []
@@ -385,6 +474,17 @@ def get_cell_coloring(winner, col_length):
         colors.extend(color_set_2)
         colors.extend(color_set_2)
     return colors
+
+def get_ranking_colors(row):
+    row_colors = [r for r in row]
+    sorted_ranks = [k for k in sorted(row, key=lambda curr: int(curr.split(' ')[1]))]
+    first = Color('Green')
+    last = Color('Red')
+    colors = list(first.range_to(last, len(row)))
+    for i in range(len(sorted_ranks)):
+        rank_index = row.index(sorted_ranks[i])
+        row_colors[rank_index] = colors[i].hex
+    return row_colors
 
 #Thrown Week? | Start/Sit Accuracy | Max Points | Acual Points | Team 1 | Team 2 | Actual Points | Max Points | Start/Sit Accuracy | Thrown Week?
 def format_matchup(p, o, all_weeks, week):
@@ -421,6 +521,7 @@ def format_matchup(p, o, all_weeks, week):
 def create_or_clear_folder(folder_dir):
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/potential_season")}', exist_ok=True)
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/user")}', exist_ok=True)
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week_rank")}', exist_ok=True)
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week")}', exist_ok=True)
     current_path = f'{folder_dir}/potential_season'
     for f in os.listdir(current_path):
@@ -428,6 +529,17 @@ def create_or_clear_folder(folder_dir):
     current_path = f'{folder_dir}/user'
     for f in os.listdir(current_path):
         os.remove(os.path.join(current_path, f))
+    current_path = f'{folder_dir}/week_rank'
+    for f in os.listdir(current_path):
+        os.remove(os.path.join(current_path, f))
     current_path = f'{folder_dir}/week'
     for f in os.listdir(current_path):
         os.remove(os.path.join(current_path, f))
+
+def pivot_data(data):
+    new_data = []
+    for i in range(len(data[0])):
+        new_data.append([])
+        for j in range(len(data)):
+            new_data[i].append(data[j][i])
+    return new_data

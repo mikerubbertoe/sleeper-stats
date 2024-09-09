@@ -12,5 +12,4 @@ class SeasonStats:
         self.highestScoreWeek = 0
         self.lowestScore = sys.float_info.max
         self.lowestScoreWeek = 0
-        self.largestGapToOpponent = 0.0
-        self.smallestGapToOpponent = 0.0
+        self.totalTouchdowns = 0
