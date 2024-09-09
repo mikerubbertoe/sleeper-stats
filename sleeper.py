@@ -23,7 +23,7 @@ def main():
     logger.info("Starting")
     master_timer = time.time()
     start = time.time()
-    sleeper = SleeperLeague(917999692448034816)
+    sleeper = SleeperLeague(917999692448034816) #1123068415276617728
     logger.info("Connected to sleeper API [%s]", time.time() - start)
 
     #sleeper.scoring_format = ScoringFormat('HALF PPFD')

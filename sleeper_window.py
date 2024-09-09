@@ -5,10 +5,12 @@ import PySimpleGUI as sg
 import report_generator
 import sleeper_playoffs
 import sleeper_season
+import sleeper_draft
 from model.Stat import *
 from model.SleeperLeague import SleeperLeague
 from model.ScoringFormat import ScoringFormat
 from requests.exceptions import HTTPError
+from sleeper_wrapper import Drafts
 import logging
 
 logger = logging.getLogger()
@@ -65,7 +67,8 @@ def main():
                       [sg.Checkbox('Week Stats', size=(20, 1), k='-WEEK_STATS-', default=True)],
                       [sg.Checkbox('User Matchups', size=(20, 1), k='-USER_MATCHUPS-', default=True)],
                       [sg.Checkbox('Potential Seasons For Each User', size=(30, 1), k='-POTENTIAL_SEASONS-', default=True)],
-                      [sg.Checkbox('Weekly Player Rankings', size=(20, 1), k='-WEEK_PLAYER_RANK-', default=True)]]
+                      [sg.Checkbox('Weekly Player Rankings', size=(20, 1), k='-WEEK_PLAYER_RANK-', default=True)],
+                      [sg.Checkbox('Draft Report', size=(20, 1), k='-DRAFT_REPORT-', default=True)]]
 
     sg.set_options(font=("Arial Bold", 14))
     layout = [[sg.Text('Enter League ID:'), sg.Input(size=(20, 1), key='league_id'),
@@ -139,7 +142,12 @@ def main():
                 report_generator.generate_all_user_report(sleeper, all_weeks_current_format)
             if values['-POTENTIAL_SEASONS-']:
                 report_generator.generate_all_season_report(sleeper, all_potential_seasons_current_format)
-
+            if values['-DRAFT_REPORT-']:
+                drafted_players = sleeper_draft.draft_picks_by_user(sleeper.league['draft_id'])
+                all_drafted_player_scores = sleeper_draft.sort_all_player_scores(sleeper)
+                drafted_players = sleeper_draft.update_drafted_player_total_score(drafted_players, all_drafted_player_scores)
+                drafted_players = sleeper_draft.update_drafted_player_position_rank(drafted_players, all_drafted_player_scores)
+                report_generator.generate_users_draft_reports(sleeper, drafted_players)
     window.close()
 
 def clear_options(window):

@@ -458,7 +458,79 @@ def generate_player_week_rankings(sleeper: SleeperLeague, all_weeks, week):
                 bbox_inches='tight')
 
     plt.close(fig)
-    plt.close('all')
+    plt.close()
+
+def generate_users_draft_reports(sleeper: SleeperLeague, drafted_players):
+    logger.info(f"Generating draft report for all users")
+    start = time.time()
+    for user in drafted_players.keys():
+        generate_user_draft_report(sleeper, drafted_players, user)
+    logger.info(f"Done [{time.time() - start}]")
+
+def generate_user_draft_report(sleeper: SleeperLeague, drafted_players, user):
+    logger.debug(f"Generating draft report for {sleeper.get_all_users()[user]['display_name']}")
+    column_labels = ["Name", "Pick #", "Position", "Draft Position Rank", "Actual Position Rank", "Rank Difference"]
+    row_labels = []
+    data = []
+    coloring = []
+    draft_position = 0
+
+    for drafted_player in drafted_players[user]:
+        if drafted_player.is_keeper:
+            row_labels.append("KEEPER")
+        else:
+            round_pick = drafted_player.round
+            row_labels.append(f'Round {round_pick}')
+        row = [drafted_player.name, drafted_player.pick_number, drafted_player.position, drafted_player.drafted_as,
+                     drafted_player.position_rank, drafted_player.drafted_as - drafted_player.position_rank]
+        data.append(row)
+
+        coloring.append(get_draft_colors(row, drafted_player))
+
+    fig, ax = plt.subplots(1, 1, figsize=(1.4 * len(column_labels), 1 * len(row_labels) * 0.6))
+    # creating a 2-dimensional dataframe out of the given data
+    df = pd.DataFrame(data, columns=column_labels)
+
+    ax.axis('tight')  # turns off the axis lines and labels
+    ax.axis('off')  # changes x and y axis limits such that all data is shown
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # plotting data
+    table = ax.table(cellText=df.values,
+                     colLabels=df.columns,
+                     rowLabels=row_labels,
+                     rowColours=["#57b56a"] * len(row_labels),
+                     colColours=["#c9673c"] * len(column_labels),
+                     # colWidths=[0.1] * len(column_labels),
+                     loc="center",
+                     cellLoc='center',
+                     rowLoc='center',
+                     colLoc='center')
+
+    cellDict = table.get_celld()
+    for key, cell in cellDict.items():
+        row, col = key
+        if row > 0 and col >= 0:
+            cell.set_facecolor(coloring[row - 1][col])
+            cell.set_alpha(0.5)
+
+    table.auto_set_font_size(False)
+    table.auto_set_column_width(col=list(range(len(df.columns))))
+    table.set_fontsize(9)
+    table.scale(1, 2)
+    plt.draw()
+    plt.tight_layout()
+
+    ax.set_title(
+        f"{sleeper.get_all_users()[user]['display_name']} {sleeper.league['season']} Draft Report (Draft Position "
+        f"{drafted_players[user][0].draft_position})", y=0.9050)
+
+    plt.savefig(f"reports/{sleeper.league['name']}/draft/{sleeper.get_all_users()[user]['display_name']}_draft_report",
+                bbox_inches='tight')
+
+    plt.close(fig)
+    plt.close()
 
 def get_cell_coloring(winner, col_length):
     colors = []
@@ -485,6 +557,21 @@ def get_ranking_colors(row):
         rank_index = row.index(sorted_ranks[i])
         row_colors[rank_index] = colors[i].hex
     return row_colors
+
+def get_draft_colors(row, drafted_player):
+    first = Color('Green')
+    last = Color('Red')
+    colors = list(last.range_to(first, 11))
+    rank_difference = drafted_player.drafted_as - drafted_player.position_rank
+    color_step = rank_difference // 4
+    if rank_difference < 0:
+        color_step = max(color_step, -5)
+    else:
+        color_step = min(color_step, 5)
+
+    row_colors = [colors[(len(colors) // 2) + color_step].hex] * len(row)
+    return row_colors
+
 
 #Thrown Week? | Start/Sit Accuracy | Max Points | Acual Points | Team 1 | Team 2 | Actual Points | Max Points | Start/Sit Accuracy | Thrown Week?
 def format_matchup(p, o, all_weeks, week):
@@ -523,6 +610,7 @@ def create_or_clear_folder(folder_dir):
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/user")}', exist_ok=True)
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week_rank")}', exist_ok=True)
     os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week")}', exist_ok=True)
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/draft")}', exist_ok=True)
     current_path = f'{folder_dir}/potential_season'
     for f in os.listdir(current_path):
         os.remove(os.path.join(current_path, f))
@@ -533,6 +621,9 @@ def create_or_clear_folder(folder_dir):
     for f in os.listdir(current_path):
         os.remove(os.path.join(current_path, f))
     current_path = f'{folder_dir}/week'
+    for f in os.listdir(current_path):
+        os.remove(os.path.join(current_path, f))
+    current_path = f'{folder_dir}/draft'
     for f in os.listdir(current_path):
         os.remove(os.path.join(current_path, f))
 
