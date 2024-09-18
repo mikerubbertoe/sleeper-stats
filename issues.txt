@@ -1,0 +1,5 @@
+-crashes if someone leaves bench spot open --FIXED
+-crashes with rookie league weekly rankings (cell coloring issue) --FIXED
+-crashes if running a weekly report if the week has not started yet (divide by 0 on accuracy calculation) --FIXED
+-crashes if trying to run std dev with only 1 week of data --FIXED
+--1 WEEK OF THE USER REPORT IS SUPER CONDENSED (NEED A BETTER WAY OF GETTING TABLE HEIGHT)

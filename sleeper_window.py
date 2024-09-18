@@ -10,7 +10,6 @@ from model.Stat import *
 from model.SleeperLeague import SleeperLeague
 from model.ScoringFormat import ScoringFormat
 from requests.exceptions import HTTPError
-from sleeper_wrapper import Drafts
 import logging
 
 logger = logging.getLogger()
@@ -74,14 +73,14 @@ def main():
     layout = [[sg.Text('Enter League ID:'), sg.Input(size=(20, 1), key='league_id'),
                sg.Button('Load League', key='load_league', enable_events=True),
                sg.ProgressBar(100, orientation='h', visible=False ,size=(20, 20), key='-PROGRESS BAR-')]]
-    #layout += [[sg.Column([[sg.Text('Enter something on Row 1'), sg.InputText(), sg.Text('Enter something on Row 1'), sg.InputText()]], scrollable=True, size=(400, 400))]]
 
     sg.set_options(font=("Arial", 10))
+    layout += [[sg.Text('League: ', enable_events=True, font=("Arial Bold", 12), visible=True, key='-LEAGUE_NAME-')]]
     layout += [[sg.Checkbox('Wins Above Median', default=False, size=(70, 1), enable_events=True, k='-WINS ABOVE MEDIAN-')]]
     layout += [[sg.TabGroup([[sg.Tab('Standard Format', simple_choices), sg.Tab('Custom', sub_tabs),
                               sg.Tab('Report Options', report_tab)]], key='-TAB GROUP-', expand_x=True, expand_y=True)]]
-    layout += [[sg.Button('Submit', k='submit', disabled=True ,enable_events=True)]]
-    window = sg.Window('Control Panel', layout, True, grab_anywhere=True, resizable=True , finalize=True, keep_on_top=True)
+    layout += [[sg.Button('Submit', k='submit', disabled=True ,enable_events=True), sg.Text('Done', key='-DONE_TEXT-', visible=False)]]
+    window = sg.Window('Control Panel', layout, True, grab_anywhere=False, resizable=True , finalize=True, keep_on_top=False)
     # Create the Window
     # Event Loop to process "events"
     while True:
@@ -92,6 +91,7 @@ def main():
             window['-PROGRESS BAR-'].update(visible=True, current_count=0, bar_color=(None, None))
             league_id = values['league_id']
             sleeper = SleeperLeague(league_id)
+            window['-LEAGUE_NAME-'].update(visible=True, font=("Arial Bold", 12), value=f'League: {sleeper.league["name"]} ({sleeper.league["season"]})')
             if not isinstance(sleeper.league, HTTPError):
                 clear_options(window)
                 wins_above_median_active = True if sleeper.league['settings']['league_average_match'] == 1 else False
@@ -111,43 +111,62 @@ def main():
                     window[scoring_option].update(scoring.__getattribute__(scoring_option))
 
         elif event in ('submit'):
-            wins_above_median_active = values['-WINS ABOVE MEDIAN-']
+            window['submit'].update(disabled=True)
+            window['-DONE_TEXT-'].update(visible=True, value="Gathering Information from Sleeper...")
             window['-PROGRESS BAR-'].update(visible=False)
+            wins_above_median_active = values['-WINS ABOVE MEDIAN-']
             scoring_format = get_all_options(window)
             sleeper.update_scoring_settings(scoring_format)
             sleeper.wins_above_median_active = wins_above_median_active
             logger.info("Getting all matchup results")
             start = time.time()
             all_weeks_current_format = sleeper_season.get_all_matchup_results(sleeper, sleeper.scoring_format)
-            all_potential_seasons_current_format = sleeper_season.caulculate_standings_for_all_schedules(sleeper,
-                                                                                                         all_weeks_current_format)
+            all_potential_seasons_current_format = sleeper_season.calculate_standings_for_all_schedules(sleeper,
+                                                                                                        all_weeks_current_format)
             logger.info("All matchup results gathered [%s]", time.time() - start)
             logger.info("calculating player matchoff results")
-            for user, seasons in all_potential_seasons_current_format.items():
-                logger.info(
-                    f"calculating playoff results for all potential seasons for user {seasons[user][user].name}")
-                sleeper_playoffs.calculate_potential_playoffs_for_user(sleeper, seasons,
-                                                                       sleeper.league['settings']['playoff_week_start'])
 
-            logger.info("Calculating player statistics")
-            user_statistics = sleeper_season.calculate_user_statistics(sleeper, all_weeks_current_format)
-            report_generator.create_or_clear_folder(f"reports/{sleeper.league['name']}")
+            if sleeper.league['settings']['leg'] >= sleeper.league['settings']['playoff_week_start']:
+                window['-DONE_TEXT-'].update(visible=True, value="Calculating Playoff Results...")
+                for user, seasons in all_potential_seasons_current_format.items():
+                    logger.info(
+                        f"calculating playoff results for all potential seasons for user {seasons[user][user].name}")
+                    sleeper_playoffs.calculate_potential_playoffs_for_user(sleeper, seasons,
+                                                                           sleeper.league['settings']['playoff_week_start'])
+
+            report_generator.create_or_clear_folder(f"reports/{sleeper.league['name']}/{sleeper.league['season']}")
             if values['-SEASON_STATS-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating Season Statistics Report...")
+                logger.info("Calculating player statistics")
+                user_statistics = sleeper_season.calculate_user_statistics(sleeper, all_weeks_current_format)
                 report_generator.generate_user_statistics_report(sleeper, all_weeks_current_format, user_statistics)
+
             if values['-WEEK_STATS-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating Week Reports...")
                 report_generator.generate_all_week_reports(sleeper, all_weeks_current_format)
+
             if values['-WEEK_PLAYER_RANK-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating Player Weekly Rank Reports...")
                 report_generator.generate_player_all_week_rankings(sleeper, all_weeks_current_format)
+
             if values['-USER_MATCHUPS-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating User Season Reports...")
                 report_generator.generate_all_user_report(sleeper, all_weeks_current_format)
+
             if values['-POTENTIAL_SEASONS-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating All Potential Season Reeports...")
                 report_generator.generate_all_season_report(sleeper, all_potential_seasons_current_format)
+
             if values['-DRAFT_REPORT-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating Draft Reports...")
                 drafted_players = sleeper_draft.draft_picks_by_user(sleeper.league['draft_id'])
                 all_drafted_player_scores = sleeper_draft.sort_all_player_scores(sleeper)
-                drafted_players = sleeper_draft.update_drafted_player_total_score(drafted_players, all_drafted_player_scores)
+                drafted_players = sleeper_draft.update_drafted_player_total_score(sleeper, drafted_players, all_drafted_player_scores)
                 drafted_players = sleeper_draft.update_drafted_player_position_rank(drafted_players, all_drafted_player_scores)
                 report_generator.generate_users_draft_reports(sleeper, drafted_players)
+
+            window['submit'].update(disabled=False)
+            window['-DONE_TEXT-'].update(visible=True, value="Done!")
     window.close()
 
 def clear_options(window):

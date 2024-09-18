@@ -11,13 +11,13 @@ def draft_picks_by_user(draft_id):
         'WR': 1,
         'TE': 1,
         'K': 1,
-        'DST': 1}
+        'DEF': 1}
     keeper_position_counter= {'QB': 1,
         'RB': 1,
         'WR': 1,
         'TE': 1,
         'K': 1,
-        'DST': 1}
+        'DEF': 1}
 
     draft = Drafts(draft_id).get_all_picks()
 
@@ -54,7 +54,7 @@ def sort_all_player_scores(sleeper: SleeperLeague):
         'QB': {},
         'TE': {},
         'K': {},
-        'DST': {},
+        'DEF': {},
         'IDP': {}
     }
 
@@ -66,16 +66,19 @@ def sort_all_player_scores(sleeper: SleeperLeague):
             player_position = sleeper.allPlayers[player_id]['fantasy_positions']
             if player_position is not None:
                 player_scores[player_position[0]][player_id] = player_score
+                sleeper.allPlayers[player_id]['gp'] = all_stats[player_id]['gp']
         except KeyError:
             continue
 
     return player_scores
 
-def update_drafted_player_total_score(user_draft, all_scores):
+def update_drafted_player_total_score(sleeper: SleeperLeague, user_draft, all_scores):
     for user, draft in user_draft.items():
         for drafted_player in draft:
             try:
                 drafted_player.points_scored = round(all_scores[drafted_player.position][drafted_player.player_id], 2)
+                drafted_player.games_played = int(sleeper.allPlayers[drafted_player.player_id]['gp'])
+                drafted_player.calculate_ppg()
             except KeyError:
                 continue
     return user_draft

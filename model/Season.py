@@ -20,6 +20,7 @@ class Season:
         self.playoff_result = 0
         self.reception_tds = 0
         self.rush_tds = 0
+        self.rostered_players = {}
 
     def __repr__(self):
         return f"{self.name}: {self.wins}-{self.losses}-{self.ties}"
@@ -104,3 +105,12 @@ def get_record_up_to_week(seasons, week, wins_above_median_active):
     for k, v in partial_records.items():
         partial_records[k] = v.get_record()
     return partial_records
+
+def update_players_played_rankings(seasons, player_rankings):
+    for user in seasons:
+        for player in user.players_played:
+            if player.fantasy_positions is None:
+                continue
+            position = player.fantasy_positions[0]
+            final_rank = player_rankings[position].index(player.player_id) + 1
+            player.position_ranking = final_rank

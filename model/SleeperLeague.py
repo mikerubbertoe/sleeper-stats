@@ -22,10 +22,18 @@ class SleeperLeague:
         self.numTE   = self.league['roster_positions'].count('TE')
         self.numFlex = self.league['roster_positions'].count('FLEX')
         self.numK    = self.league['roster_positions'].count('K')
-        self.numDST  = self.league['roster_positions'].count('DST')
+        self.numDST  = self.league['roster_positions'].count('DEF')
         self.allPlayers = self.players.get_all_players()
         self.scoring_format = ScoringFormat(new_rules=self.league['scoring_settings'])
         self.scoring_format_name = self.get_scoring_type()
+        self.player_position_scores_current_format = {
+            'WR': {},
+            'RB': {},
+            'QB': {},
+            'TE': {},
+            'K': {},
+            'DEF': {}
+        }
     def get_all_players(self):
         return self.allPlayers
 

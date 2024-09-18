@@ -34,7 +34,7 @@ def main():
 
     regular_season_length = min(sleeper.league['settings']['leg'], sleeper.league['settings']['playoff_week_start'])
     all_weeks_current_format = sleeper_season.get_all_matchup_results(sleeper, sleeper.scoring_format)
-    all_potential_seasons_current_format = sleeper_season.caulculate_standings_for_all_schedules(sleeper, all_weeks_current_format)
+    all_potential_seasons_current_format = sleeper_season.calculate_standings_for_all_schedules(sleeper, all_weeks_current_format)
     logger.info("All matchup results gathered [%s]", time.time() - start)
 
     logger.info("calculating player matchoff results")

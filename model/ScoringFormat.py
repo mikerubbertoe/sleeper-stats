@@ -121,51 +121,6 @@ def get_player_score(player, week_stats, scoring_format: ScoringFormat):
     for scoring_option in scoring_format.__dir__():
         if not scoring_option.startswith('__'):
             score += (stats.get(scoring_option, 0)) * scoring_format.__getattribute__(scoring_option)
-    #DEF stats
-    # score += (stats.get('fum_rec_td', 0) * scoring_format.fum_rec_td)
-    # score += (stats.get('blk_kick', 0) * scoring_format.blk_kick)
-    # score += (stats.get('safe', 0) * scoring_format.safety)
-    # score += (stats.get('sack', 0) * scoring_format.sack)
-    # score += (stats.get('def_td', 0) * scoring_format.def_td)
-    # score += (stats.get('fum_rec', 0) * scoring_format.fum_rec)
-    # score += (stats.get('int', 0) * scoring_format.int)
-    # score += (stats.get('ff', 0) * scoring_format.forced_fumble)
-    # score += (stats.get('pts_allow_0', 0) * scoring_format.pts_allow_0)
-    # score += (stats.get('pts_allow_1_6', 0) * scoring_format.pts_allow_1_6)
-    # score += (stats.get('pts_allow_14_20', 0) * scoring_format.pts_allow_14_20)
-    # score += (stats.get('pts_allow_21_27', 0) * scoring_format.pts_allow_21_27)
-    # score += (stats.get('pts_allow_28_34', 0) * scoring_format.pts_allow_28_34)
-    # score += (stats.get('pts_allow_35p', 0) * scoring_format.pts_allow_35p)
-    #
-    # #K stats
-    # score += (stats.get('xpm', 0) * scoring_format.xp_made)
-    # score += ((stats.get('xpa', 0) - stats.get('xpm', 0)) * scoring_format.xp_miss)
-    # score += ((stats.get('fga', 0) - stats.get('fgm', 0)) * scoring_format.xp_miss)
-    # score += (stats.get('fgm_0_19', 0) * scoring_format.fg_made_0_19)
-    # score += (stats.get('fgm_20_29', 0) * scoring_format.fg_made_20_29)
-    # score += (stats.get('fgm_30_39', 0) * scoring_format.fg_made_30_39)
-    # score += (stats.get('fgm_40_49', 0) * scoring_format.fg_made_40_49)
-    # score += (stats.get('fgm_50p', 0) * scoring_format.fg_made_50p)
-    #
-    # #OFFENSIVE STATS
-    # score += (stats.get('rec', 0) * scoring_format.rec)
-    # score += (stats.get('rec_yd', 0) * scoring_format.rec_yd)
-    # score += (stats.get('rec_fd', 0) * scoring_format.rec_fd)
-    # score += (stats.get('rec_td', 0) * scoring_format.rec_td)
-    # score += (stats.get('rec_2pt', 0) * scoring_format.rec_2pt)
-    #
-    # score += (stats.get('rush_yd', 0) * scoring_format.rush_yd)
-    # score += (stats.get('rush_fd', 0) * scoring_format.rush_fd)
-    # score += (stats.get('rush_td', 0) * scoring_format.rush_td)
-    # score += (stats.get('rush_2pt', 0) * scoring_format.rush_2pt)
-    #
-    # score += (stats.get('pass_yd', 0) * scoring_format.pass_yd)
-    # score += (stats.get('pass_td', 0) * scoring_format.pass_td)
-    # score += (stats.get('pass_2pt', 0) * scoring_format.pass_2pt)
-    # score += (stats.get('pass_int', 0) * scoring_format.pass_int)
-    #
-    # score += (stats.get('fum', 0) * scoring_format.fum)
-    # score += (stats.get('fum_lost', 0) * scoring_format.fum_lost)
 
     return score
 
