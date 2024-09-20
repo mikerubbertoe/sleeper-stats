@@ -6,6 +6,7 @@ class Player:
         self.games_played = games_played
         self.fantasy_positions = fantasy_positions
         self.position_ranking = position_ranking
+        self.ppg = 0
 
 
     def __str__(self):

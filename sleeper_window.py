@@ -67,7 +67,8 @@ def main():
                       [sg.Checkbox('User Matchups', size=(20, 1), k='-USER_MATCHUPS-', default=True)],
                       [sg.Checkbox('Potential Seasons For Each User', size=(30, 1), k='-POTENTIAL_SEASONS-', default=True)],
                       [sg.Checkbox('Weekly Player Rankings', size=(20, 1), k='-WEEK_PLAYER_RANK-', default=True)],
-                      [sg.Checkbox('Draft Report', size=(20, 1), k='-DRAFT_REPORT-', default=True)]]
+                      [sg.Checkbox('Draft Report', size=(20, 1), k='-DRAFT_REPORT-', default=True)],
+                      [sg.Checkbox('Top 10 Players For Each User', size=(30, 1), k='-TOP_10-', default=True)]]
 
     sg.set_options(font=("Arial Bold", 14))
     layout = [[sg.Text('Enter League ID:'), sg.Input(size=(20, 1), key='league_id'),
@@ -134,36 +135,53 @@ def main():
                     sleeper_playoffs.calculate_potential_playoffs_for_user(sleeper, seasons,
                                                                            sleeper.league['settings']['playoff_week_start'])
 
-            report_generator.create_or_clear_folder(f"reports/{sleeper.league['name']}/{sleeper.league['season']}")
             if values['-SEASON_STATS-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating Season Statistics Report...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/potential_season")
                 logger.info("Calculating player statistics")
                 user_statistics = sleeper_season.calculate_user_statistics(sleeper, all_weeks_current_format)
                 report_generator.generate_user_statistics_report(sleeper, all_weeks_current_format, user_statistics)
 
             if values['-WEEK_STATS-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating Week Reports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/week")
                 report_generator.generate_all_week_reports(sleeper, all_weeks_current_format)
 
             if values['-WEEK_PLAYER_RANK-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating Player Weekly Rank Reports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/week_rank")
                 report_generator.generate_player_all_week_rankings(sleeper, all_weeks_current_format)
 
             if values['-USER_MATCHUPS-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating User Season Reports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/user")
                 report_generator.generate_all_user_report(sleeper, all_weeks_current_format)
 
             if values['-POTENTIAL_SEASONS-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating All Potential Season Reeports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/potential_season")
                 report_generator.generate_all_season_report(sleeper, all_potential_seasons_current_format)
 
             if values['-DRAFT_REPORT-']:
                 window['-DONE_TEXT-'].update(visible=True, value="Generating Draft Reports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/draft")
                 drafted_players = sleeper_draft.draft_picks_by_user(sleeper.league['draft_id'])
                 all_drafted_player_scores = sleeper_draft.sort_all_player_scores(sleeper)
                 drafted_players = sleeper_draft.update_drafted_player_total_score(sleeper, drafted_players, all_drafted_player_scores)
                 drafted_players = sleeper_draft.update_drafted_player_position_rank(drafted_players, all_drafted_player_scores)
                 report_generator.generate_users_draft_reports(sleeper, drafted_players)
+
+            if values['-TOP_10-']:
+                window['-DONE_TEXT-'].update(visible=True, value="Generating Top 10 Player Reports...")
+                report_generator.create_or_clear_folder(
+                    f"reports/{sleeper.league['name']}/{sleeper.league['season']}/top_10")
+                report_generator.generate_all_users_top_10_player_report(sleeper, all_weeks_current_format)
 
             window['submit'].update(disabled=False)
             window['-DONE_TEXT-'].update(visible=True, value="Done!")

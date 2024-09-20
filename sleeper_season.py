@@ -1,4 +1,5 @@
 import logging
+import copy
 from statistics import stdev, mean, median
 from logging.config import fileConfig
 
@@ -51,7 +52,18 @@ def get_all_matchup_results(sleeper: SleeperLeague, scoring_format):
 
     find_playoff_teams(season, sleeper.league['settings']['playoff_teams'])
     sleeper.player_position_scores_current_format = sort_player_rankings(sleeper.player_position_scores_current_format)
+
+    for user in season.values():
+        user.update_all_rostered_player_rankings_and_ppg(sleeper)
+
     return season
+
+def get_top_players_for_user(season, user, num_top_players):
+    user_season = season[user]
+    sorted_players = [k for k in sorted(user_season.rostered_players.values(), key=lambda player: player.points_scored, reverse=True)]
+    top_players = sorted_players[:num_top_players]
+
+    return top_players
 
 def update_season_rankings(season, week_results, wins_above_median_active, week_median):
     for k, v in week_results.items():
@@ -440,7 +452,8 @@ def sort_player_rankings(player_scores):
     return player_scores
 def add_players_played_to_user_season(user_season, week):
     for player_played in week.starter_stats:
-        add_or_combine_players_played(user_season.rostered_players, player_played)
+        player_copy = copy.deepcopy(player_played)
+        add_or_combine_players_played(user_season.rostered_players, player_copy)
     return
 
 def add_or_combine_players_played(players_played, new_player: Player):

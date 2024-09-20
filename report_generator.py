@@ -397,7 +397,7 @@ def generate_player_week_rankings(sleeper: SleeperLeague, all_weeks, week):
         match_lineup = user.matchups[week - 1].actual_lineup
         for i in range(len(match_lineup)):
             player = match_lineup[i]
-
+            player_score = 0.0
             #when a player has a value of 0, it means the slot was left empty and se should set the ranking to 999. We
             #can determine the position by finding out what index the 0 was at and corrolate it to the possible rosters.
             #have to check if multiple slots were left open as well
@@ -406,21 +406,22 @@ def generate_player_week_rankings(sleeper: SleeperLeague, all_weeks, week):
                 for i in indicies:
                     player_position = sleeper.league['roster_positions'][i]
                     player_ranking = 999
-                    row.append(f'{player_position} {player_ranking }')
+                    row.append(f'{player_position} {player_ranking } (0.0)')
             else:
                 player_position = sleeper.allPlayers[player]['fantasy_positions'][0]
                 try:
                     player_ranking = sleeper.player_weekly_rankings[week][player_position].index(player)
+                    player_score = [score for _, score in enumerate(user.matchups[week - 1].starter_stats) if player == score.player_id][0].points_scored
                 except ValueError:
                     player_ranking = 998
-                row.append(f'{player_position} {player_ranking + 1}')
+                row.append(f'{player_position} {player_ranking + 1} ({round(player_score, 2)})')
 
         if user.matchups[week - 1].result == 1:
-            user_result.append('WIN')
+            user_result.append(f'WIN ({round(user.matchups[week - 1].actual_score, 2)})')
         elif user.matchups[week - 1].result == -1:
-            user_result.append('LOSS')
+            user_result.append(f'LOSS ({round(user.matchups[week - 1].actual_score, 2)})')
         else:
-            user_result.append('TIE')
+            user_result.append(f'TIE ({round(user.matchups[week - 1].actual_score, 2)})')
         data.append(row)
 
     #pivot the data and get the cell coloring
@@ -431,9 +432,9 @@ def generate_player_week_rankings(sleeper: SleeperLeague, all_weeks, week):
     data.append(user_result)
     result_colors = []
     for result in user_result:
-        if result == 'WIN':
+        if result.startswith('WIN'):
             result_colors.append(Color('green').hex)
-        elif result == 'LOSS':
+        elif result.startswith('LOSS'):
             result_colors.append(Color('red').hex)
         else:
             result_colors.append(Color('yellow').hex)
@@ -558,6 +559,69 @@ def generate_user_draft_report(sleeper: SleeperLeague, drafted_players, user):
     plt.close(fig)
     plt.close()
 
+def generate_all_users_top_10_player_report(sleeper: SleeperLeague, season):
+    logger.info(f"Generating top 10 players report for all users")
+    start = time.time()
+
+    for user_season in season.values():
+        generate_user_top_10_player_report(sleeper, user_season)
+
+    logger.info(f"Done [{time.time() - start}]")
+
+def generate_user_top_10_player_report(sleeper: SleeperLeague, user_season):
+    logger.debug(f"Generating top 10 players report for {sleeper.get_all_users()[user_season.user_id]['display_name']}")
+    top_10_players = user_season.get_top_players_for_user(10)
+    column_labels = ["Name", "Rank", "Games Played", "Points Scored", "Points Per Game", "Point Share"]
+    row_labels = [i + 1 for i in range(len(top_10_players))]
+    data = []
+    for player in top_10_players:
+        row = []
+        row.append(player.name)
+        row.append(f'{player.fantasy_positions[0]} {player.position_ranking}')
+        row.append(player.games_played)
+        row.append(player.points_scored)
+        row.append(player.ppg)
+        row.append(f'{round((player.points_scored / user_season.points_earned) * 100, 2)}%')
+
+        data.append(row)
+
+    fig, ax = plt.subplots(1, 1, figsize=(1.4 * len(column_labels), 0.4 * len(row_labels) * 1.2))
+    # creating a 2-dimensional dataframe out of the given data
+    df = pd.DataFrame(data, columns=column_labels)
+
+    ax.axis('tight')  # turns off the axis lines and labels
+    ax.axis('off')  # changes x and y axis limits such that all data is shown
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # plotting data
+    table = ax.table(cellText=df.values,
+                     colLabels=df.columns,
+                     rowLabels=row_labels,
+                     rowColours=["#57b56a"] * len(row_labels),
+                     colColours=["#c9673c"] * len(column_labels),
+                     # colWidths=[0.1] * len(column_labels),
+                     loc="center",
+                     cellLoc='center',
+                     rowLoc='center',
+                     colLoc='center')
+
+    table.auto_set_font_size(False)
+    table.auto_set_column_width(col=list(range(len(df.columns))))
+    table.set_fontsize(9)
+    table.scale(1, 2)
+    plt.draw()
+    plt.tight_layout()
+
+    ax.set_title(
+        f"{sleeper.get_all_users()[user_season.user_id]['display_name']} {sleeper.league['season']} Top 10 Regular Season Players")
+
+    plt.savefig(f"reports/{sleeper.league['name']}/{sleeper.league['season']}/top_10/"
+                f"{sleeper.get_all_users()[user_season.user_id]['display_name']}_top_10", bbox_inches='tight')
+
+    plt.close(fig)
+    plt.close()
+
 def get_cell_coloring(winner, col_length):
     colors = []
     color_set_1 = ['#c6efce'] * (col_length // 2)
@@ -636,26 +700,10 @@ def format_matchup(p, o, all_weeks, week):
 
 
 def create_or_clear_folder(folder_dir):
-    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/potential_season")}', exist_ok=True)
-    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/user")}', exist_ok=True)
-    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week_rank")}', exist_ok=True)
-    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/week")}', exist_ok=True)
-    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}/draft")}', exist_ok=True)
-    current_path = f'{folder_dir}/potential_season'
-    for f in os.listdir(current_path):
-        os.remove(os.path.join(current_path, f))
-    current_path = f'{folder_dir}/user'
-    for f in os.listdir(current_path):
-        os.remove(os.path.join(current_path, f))
-    current_path = f'{folder_dir}/week_rank'
-    for f in os.listdir(current_path):
-        os.remove(os.path.join(current_path, f))
-    current_path = f'{folder_dir}/week'
-    for f in os.listdir(current_path):
-        os.remove(os.path.join(current_path, f))
-    current_path = f'{folder_dir}/draft'
-    for f in os.listdir(current_path):
-        os.remove(os.path.join(current_path, f))
+    os.makedirs(f'{os.path.join(os.getcwd(), f"{folder_dir}")}', exist_ok=True)
+
+    for f in os.listdir(folder_dir):
+        os.remove(os.path.join(folder_dir, f))
 
 def pivot_data(data):
     new_data = []

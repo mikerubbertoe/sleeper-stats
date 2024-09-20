@@ -34,6 +34,25 @@ class Season:
     def get_season_accuracy(self):
         return round(self.points_earned / self.points_possible, 2)
 
+    def update_all_rostered_player_rankings_and_ppg(self, sleeper):
+
+        for k, v in self.rostered_players.items():
+            player_position = v.fantasy_positions[0]
+            position_rank = 0
+            try:
+                position_rank = sleeper.player_position_scores_current_format[player_position].index(k) + 1
+            except ValueError:
+                position_rank = 999
+            v.position_ranking = position_rank
+            v.ppg = round(v.points_scored / v.games_played, 2) if v.games_played > 0 else 0
+
+    def get_top_players_for_user(self, num_top_players):
+        sorted_players = [k for k in sorted(self.rostered_players.values(),
+                          key=lambda player: player.points_scored, reverse=True)]
+        top_players = sorted_players[:num_top_players]
+
+        return top_players
+
 def get_season_rankings(seasons):
     seeding = []
     for k, user in seasons.items():
